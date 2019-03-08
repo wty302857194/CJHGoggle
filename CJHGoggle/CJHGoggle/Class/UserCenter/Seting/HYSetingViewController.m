@@ -1,0 +1,171 @@
+//
+//  HYSetingViewController.m
+//  CJHGoggle
+//
+//  Created by 吴棒棒 on 2018/8/9.
+//  Copyright © 2018年 CJH. All rights reserved.
+//
+/**
+ *　　　　　　　 ┏┓       ┏┓+ +
+ *　　　　　　　┏┛┻━━━━━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　 ┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 █████━█████  ┃+
+ *　　　　　　　┃　　　　　　 ┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　 ┃ + +
+ *　　　　　　　┗━━┓　　　 ┏━┛
+ *               ┃　　  ┃
+ *　　　　　　　　　┃　　  ┃ + + + +
+ *　　　　　　　　　┃　　　┃　Code is far away from     bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　         神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　 ┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━━━┳┓┏┛ + + + +
+ *　　　　　　　　　 ┃┫┫　 ┃┫┫
+ *　　　　　　　　　 ┗┻┛　 ┗┻┛+ + + +
+ */
+
+#import "HYSetingViewController.h"
+#import "HYAboutViewController.h"
+#import "HYHelpViewController.h"
+
+@interface HYSetingViewController ()<UITableViewDelegate,UITableViewDataSource,UIAlertViewDelegate>
+@property (weak, nonatomic) IBOutlet UITableView *tableView;
+@property (nonatomic, copy) NSArray *titleArr;
+@property (nonatomic, copy) NSArray *imgArr;
+@end
+
+@implementation HYSetingViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view from its nib.
+    self.navigationItem.title = @"设置";
+    [self tableViewFooterView];
+}
+- (void)tableViewFooterView
+{
+    UIView * view = [[UIView alloc]initWithFrame:CGRectMake(0, 0, kScreenWidth, 70)];
+    self.tableView.tableFooterView = view;
+    UIButton *_btn = [UIButton buttonWithType:0];
+    _btn.backgroundColor = hexColor(ff4e00);
+    _btn.layer.masksToBounds = YES;
+    [_btn setTitle:@"退出登录" forState:UIControlStateNormal];
+    _btn.layer.cornerRadius = 8;
+    [_btn addTarget:self action:@selector(getOutApp) forControlEvents:UIControlEventTouchUpInside];
+    [view addSubview:_btn];
+    
+    [_btn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.mas_equalTo(20);
+        make.height.mas_equalTo(40);
+        make.left.mas_equalTo(10);
+        make.right.mas_equalTo(-10);
+    }];
+}
+- (void)getOutApp {
+    
+    [[HYManager sharedManager] logout];
+}
+#pragma mark - UITableViewDelegate
+- (NSInteger)tableView:(UITableView *)table numberOfRowsInSection:(NSInteger)section
+{
+    return self.titleArr.count;
+}
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    return 1;
+}
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    return 60;
+}
+
+- (UITableViewCell*)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    static NSString *cellid=@"listviewid";
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellid];
+    if (cell == nil) {
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:cellid];
+        cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    }
+    if (indexPath.row == 2) {
+        cell.detailTextLabel.font = [UIFont systemFontOfSize:13];
+        cell.detailTextLabel.text = [NSString stringWithFormat:@"当前版本V%@",[Global getAppVersion]];
+    }
+    cell.imageView.image = [UIImage imageNamed:self.imgArr[indexPath.row]];
+    cell.textLabel.text = self.titleArr[indexPath.row];
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    
+    switch (indexPath.row) {
+        case 0:
+        {
+            HYAboutViewController *vc = [[HYAboutViewController alloc] init];
+            [self pushNewViewController:vc];
+        }
+            break;
+        case 1:
+        {
+            HYHelpViewController *vc = [[HYHelpViewController alloc] init];
+            [self pushNewViewController:vc];
+        }
+            break;
+        case 2:
+        {
+            
+        }
+            break;
+        case 3:
+        {
+            NSInteger size = [[SDImageCache sharedImageCache] getSize];
+            //由 byte 转换为 m
+            NSString *sizeM = [NSString stringWithFormat:@"%.2f", size / (1024.0f * 1024.0f)];
+            NSString *str = [NSString stringWithFormat:@"缓存大小为%@M，确定要清除缓存吗？",sizeM];
+            UIAlertView *al = [[UIAlertView alloc] initWithTitle:@"温馨提示" message:str delegate:self cancelButtonTitle:nil otherButtonTitles:@"取消",@"确认", nil];
+            [al show];
+        }
+            break;
+        default:
+            break;
+    }
+}
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    if (buttonIndex==1) {
+        [[SDImageCache sharedImageCache] clearMemory];
+        //本地缓存的字节数
+        NSInteger size = [[SDImageCache sharedImageCache] getSize];
+        //由 byte 转换为 m
+        NSString *sizeM = [NSString stringWithFormat:@"%.2f", size / (1024.0f * 1024.0f)];
+        [Global promptMessage:@"已清理缓存图片" inView:self.view];
+    }
+}
+- (NSArray *)titleArr
+{
+    if (!_titleArr) {
+        _titleArr = @[@"关于",@"帮助",@"检测更新",@"清除缓存"];
+    }
+    return _titleArr;
+}
+- (NSArray *)imgArr
+{
+    if (!_imgArr) {
+        _imgArr = @[@"hy_about_img",@"hy_help_img",@"hy_update_img",@"hy_cleanUp_img"];
+    }
+    return _imgArr;
+}
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+@end

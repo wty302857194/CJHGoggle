@@ -1,0 +1,70 @@
+//
+//  HYAnnounceDetailViewController.m
+//  CJHGoggle
+//
+//  Created by 吴棒棒 on 2018/8/13.
+//  Copyright © 2018年 CJH. All rights reserved.
+//
+/**
+ *　　　　　　　 ┏┓       ┏┓+ +
+ *　　　　　　　┏┛┻━━━━━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　 ┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 █████━█████  ┃+
+ *　　　　　　　┃　　　　　　 ┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　 ┃ + +
+ *　　　　　　　┗━━┓　　　 ┏━┛
+ *               ┃　　  ┃
+ *　　　　　　　　　┃　　  ┃ + + + +
+ *　　　　　　　　　┃　　　┃　Code is far away from     bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　         神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　 ┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━━━┳┓┏┛ + + + +
+ *　　　　　　　　　 ┃┫┫　 ┃┫┫
+ *　　　　　　　　　 ┗┻┛　 ┗┻┛+ + + +
+ */
+
+#import "HYAnnounceDetailViewController.h"
+
+@interface HYAnnounceDetailViewController ()
+@property (weak, nonatomic) IBOutlet UILabel *contentLab;
+@property (weak, nonatomic) IBOutlet UILabel *timeLab;
+
+@end
+
+@implementation HYAnnounceDetailViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view from its nib.
+    self.navigationItem.title = @"公告详情";
+    [self readMessageRequestData];
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+#pragma mark - requestData
+- (void)readMessageRequestData
+{
+    NSDictionary *dic = @{
+                          @"messageid":self.messageid
+                          };
+    [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    WEAKSELF
+    [HYHTTPClient asynchronousPostRequest:@"message/readMessage" parameters:dic successBlock:^(BOOL success, id data, NSString *msg) {
+        [MBProgressHUD hideHUDForView:weakSelf.view animated:YES];
+        [Global promptMessage:msg inView:weakSelf.view];
+
+    } failureBlock:^(NSString *description) {
+        [Global promptMessage:description inView:weakSelf.view];
+        [MBProgressHUD hideHUDForView:weakSelf.view animated:YES];
+    }];
+}
+@end

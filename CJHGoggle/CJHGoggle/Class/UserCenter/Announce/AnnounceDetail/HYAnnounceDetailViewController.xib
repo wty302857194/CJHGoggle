@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="14113" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
+    <device id="retina4_7" orientation="portrait">
+        <adaptation id="fullscreen"/>
+    </device>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="14088"/>
+        <capability name="Aspect ratio constraints" minToolsVersion="5.1"/>
+        <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="HYAnnounceDetailViewController">
+            <connections>
+                <outlet property="contentLab" destination="hMH-Ku-NFp" id="TWu-tY-vRN"/>
+                <outlet property="timeLab" destination="Tsx-cc-Prj" id="aXf-p8-3oE"/>
+                <outlet property="view" destination="i5M-Pr-FkT" id="sfx-zR-JGt"/>
+            </connections>
+        </placeholder>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <view clearsContextBeforeDrawing="NO" contentMode="scaleToFill" id="i5M-Pr-FkT">
+            <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
+            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+            <subviews>
+                <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="Ngc-I3-PYW">
+                    <rect key="frame" x="30" y="107.5" width="315" height="332"/>
+                    <subviews>
+                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="hMH-Ku-NFp">
+                            <rect key="frame" x="10" y="30" width="295" height="0.0"/>
+                            <fontDescription key="fontDescription" type="system" pointSize="18"/>
+                            <color key="textColor" red="0.1960784314" green="0.1960784314" blue="0.1960784314" alpha="1" colorSpace="calibratedRGB"/>
+                            <nil key="highlightedColor"/>
+                        </label>
+                        <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="hy_detial_img" translatesAutoresizingMaskIntoConstraints="NO" id="F0a-9f-Axm">
+                            <rect key="frame" x="0.0" y="162" width="170" height="170"/>
+                            <constraints>
+                                <constraint firstAttribute="width" secondItem="F0a-9f-Axm" secondAttribute="height" multiplier="1:1" id="DJ9-3F-UFB"/>
+                                <constraint firstAttribute="width" constant="170" id="a28-bP-BAH"/>
+                            </constraints>
+                        </imageView>
+                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Tsx-cc-Prj">
+                            <rect key="frame" x="305" y="207" width="0.0" height="0.0"/>
+                            <fontDescription key="fontDescription" type="system" pointSize="16"/>
+                            <nil key="textColor"/>
+                            <nil key="highlightedColor"/>
+                        </label>
+                    </subviews>
+                    <color key="backgroundColor" red="0.95686274510000002" green="0.96078431369999995" blue="0.96470588239999999" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                    <constraints>
+                        <constraint firstItem="Tsx-cc-Prj" firstAttribute="centerY" secondItem="F0a-9f-Axm" secondAttribute="centerY" constant="-40" id="IGJ-ss-JG7"/>
+                        <constraint firstAttribute="bottom" secondItem="F0a-9f-Axm" secondAttribute="bottom" id="Ilk-1E-lIC"/>
+                        <constraint firstAttribute="trailing" secondItem="hMH-Ku-NFp" secondAttribute="trailing" constant="10" id="MOv-iO-bzn"/>
+                        <constraint firstItem="F0a-9f-Axm" firstAttribute="leading" secondItem="Ngc-I3-PYW" secondAttribute="leading" id="MTX-lk-U9M"/>
+                        <constraint firstItem="hMH-Ku-NFp" firstAttribute="leading" secondItem="Ngc-I3-PYW" secondAttribute="leading" constant="10" id="R1D-Ff-BhL"/>
+                        <constraint firstItem="Tsx-cc-Prj" firstAttribute="trailing" secondItem="hMH-Ku-NFp" secondAttribute="trailing" id="TOn-e3-ssj"/>
+                        <constraint firstItem="hMH-Ku-NFp" firstAttribute="top" secondItem="Ngc-I3-PYW" secondAttribute="top" constant="30" id="bWA-QV-VHa"/>
+                        <constraint firstAttribute="width" secondItem="Ngc-I3-PYW" secondAttribute="height" multiplier="946:998" id="fPg-8i-1bW"/>
+                    </constraints>
+                    <userDefinedRuntimeAttributes>
+                        <userDefinedRuntimeAttribute type="number" keyPath="borderWidth">
+                            <real key="value" value="1"/>
+                        </userDefinedRuntimeAttribute>
+                        <userDefinedRuntimeAttribute type="color" keyPath="borderColor">
+                            <color key="value" red="1" green="0.30588235289999999" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        </userDefinedRuntimeAttribute>
+                    </userDefinedRuntimeAttributes>
+                </view>
+            </subviews>
+            <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+            <constraints>
+                <constraint firstItem="Ngc-I3-PYW" firstAttribute="centerY" secondItem="Q5M-cg-NOt" secondAttribute="centerY" constant="-70" id="QyJ-Ir-AvF"/>
+                <constraint firstItem="Ngc-I3-PYW" firstAttribute="leading" secondItem="Q5M-cg-NOt" secondAttribute="leading" constant="30" id="bcX-gH-Epw"/>
+                <constraint firstItem="Q5M-cg-NOt" firstAttribute="trailing" secondItem="Ngc-I3-PYW" secondAttribute="trailing" constant="30" id="dzD-5k-0r4"/>
+            </constraints>
+            <viewLayoutGuide key="safeArea" id="Q5M-cg-NOt"/>
+            <point key="canvasLocation" x="36.5" y="53.5"/>
+        </view>
+    </objects>
+    <resources>
+        <image name="hy_detial_img" width="240" height="200"/>
+    </resources>
+</document>

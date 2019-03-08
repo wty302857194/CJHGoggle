@@ -1,0 +1,122 @@
+//
+//  HYHYShipListTableViewCell.m
+//  CJHGoggle
+//
+//  Created by 吴棒棒 on 2018/8/7.
+//  Copyright © 2018年 CJH. All rights reserved.
+//
+/**
+ *　　　　　　　 ┏┓       ┏┓+ +
+ *　　　　　　　┏┛┻━━━━━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　 ┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 █████━█████  ┃+
+ *　　　　　　　┃　　　　　　 ┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　 ┃ + +
+ *　　　　　　　┗━━┓　　　 ┏━┛
+ *               ┃　　  ┃
+ *　　　　　　　　　┃　　  ┃ + + + +
+ *　　　　　　　　　┃　　　┃　Code is far away from     bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　         神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　 ┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━━━┳┓┏┛ + + + +
+ *　　　　　　　　　 ┃┫┫　 ┃┫┫
+ *　　　　　　　　　 ┗┻┛　 ┗┻┛+ + + +
+ */
+
+#import "HYHYShipListTableViewCell.h"
+#import "HYShipListModel.h"
+#import "TagView.h"
+@interface HYHYShipListTableViewCell ()<TagViewDelegate>
+@end
+@implementation HYHYShipListTableViewCell
+
+- (void)awakeFromNib {
+    [super awakeFromNib];
+    // Initialization code
+
+    self.tagsView.delegate = self;//暂时不需要代理回调
+    
+    WEAKSELF;
+    self.tagsView.tagsViewHeight = ^(NSInteger height) {
+        if (height>20) {
+            weakSelf.tagsViewHeightLayout.constant = height;//预估行高需要在回调的时候刷新行高
+
+        }else {
+            weakSelf.tagsViewHeightLayout.constant = 20;
+        }
+    };
+
+}
+- (void)setShipListModel:(HYShipListModel *)shipListModel
+{
+    _shipListModel = shipListModel;
+    
+    NSMutableArray *labArr = [NSMutableArray arrayWithCapacity:0];
+    [shipListModel.labelList enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        HYLabelListModel *model = (HYLabelListModel *)obj;
+        [labArr addObject:model.name];
+    }];
+    self.dataArr = [NSArray arrayWithArray:labArr];
+    
+    NSString *title = ![NSString dp_isEmptyString:shipListModel.chName] ? shipListModel.chName : (![NSString dp_isEmptyString:shipListModel.shipName] ? shipListModel.shipName : shipListModel.mmsi);
+    self.shipName.text = [NSString stringWithFormat:@"【%@】", title];
+    self.stationLab.text = [NSString stringWithFormat:@"最近靠泊：%@ %@", shipListModel.sitename?:@"", [NSDate dateWithTimeIntervalSince1970:shipListModel.utc.doubleValue/1000].string];
+    
+    
+    
+    double course = [shipListModel.course doubleValue];
+    if(shipListModel.cjhState) {
+        
+        if(course >= 0 && course <= 180) {
+            
+            self.imgView.image = [UIImage imageNamed:@"cjh_v_right"];
+        }
+        else if(course > 180 && course <= 360) {
+            
+            self.imgView.image = [UIImage imageNamed:@"cjh_v_left"];
+        }
+    }
+    else {
+        
+        
+        if(course >= 0 && course <= 180) {
+            
+            self.imgView.image = [UIImage imageNamed:@"cjh_p_right"];
+        }
+        else if(course > 180 && course <= 360) {
+            
+            self.imgView.image = [UIImage imageNamed:@"cjh_p_left"];
+        }
+    }
+//    else {
+//
+//
+//        if(course >= 0 && course <= 180) {
+//
+//            self.imgView.image = [UIImage imageNamed:@"ship_default_right"];
+//        }
+//        else if(course > 180 && course <= 360) {
+//
+//            self.imgView.image = [UIImage imageNamed:@"ship_default_left"];
+//        }
+//    }
+
+}
+- (void)setDataArr:(NSArray *)dataArr {
+    _dataArr = dataArr;
+    self.tagsView.arr = dataArr;
+    [self.contentView layoutIfNeeded];
+}
+-(void)handleSelectTag:(NSString *)keyWord
+{
+    
+}
+
+
+@end

@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Bucket
+   type = "0"
+   version = "2.0">
+   <Breakpoints>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "CJHGoggle/Class/LogIn/model/HYUserModel.m"
+            timestampString = "555496637.055669"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "75"
+            endingLineNumber = "75"
+            landmarkName = "+postRequest:parameters:successBlock:failureBlock:"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "CJHGoggle/Class/UserCenter/Announce/HYAnnounceViewController.m"
+            timestampString = "555905452.919884"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "114"
+            endingLineNumber = "114"
+            landmarkName = "-selectView"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "-[HYAnnounceViewController selectView]"
+                  moduleName = "CJHGoggle"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/wubangbang/Documents/iOS/CJHGoggle/CJHGoggle/CJHGoggle/Class/UserCenter/Announce/HYAnnounceViewController.m"
+                  timestampString = "555943317.4213229"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "114"
+                  endingLineNumber = "114"
+                  offsetFromSymbolStart = "252">
+               </Location>
+               <Location
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "__38-[HYAnnounceViewController selectView]_block_invoke"
+                  moduleName = "CJHGoggle"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/wubangbang/Documents/iOS/CJHGoggle/CJHGoggle/CJHGoggle/Class/UserCenter/Announce/HYAnnounceViewController.m"
+                  timestampString = "555943317.425572"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "115"
+                  endingLineNumber = "115"
+                  offsetFromSymbolStart = "60">
+               </Location>
+               <Location
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "__destroy_helper_block_.148"
+                  moduleName = "CJHGoggle"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/wubangbang/Documents/iOS/CJHGoggle/CJHGoggle/CJHGoggle/Class/UserCenter/Announce/HYAnnounceViewController.m"
+                  timestampString = "555943317.427827"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "114"
+                  endingLineNumber = "114"
+                  offsetFromSymbolStart = "16">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "CJHGoggle/Class/UserCenter/Announce/HYAnnounceViewController.m"
+            timestampString = "555919634.1883349"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "141"
+            endingLineNumber = "141"
+            landmarkName = "-getDepartmentsRequestData"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+   </Breakpoints>
+</Bucket>

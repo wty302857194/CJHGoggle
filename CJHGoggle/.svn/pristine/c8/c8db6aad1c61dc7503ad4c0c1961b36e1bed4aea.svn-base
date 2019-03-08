@@ -1,0 +1,213 @@
+//
+//  HYImportantClientViewController.m
+//  CJHGoggle
+//
+//  Created by 吴棒棒 on 2018/8/8.
+//  Copyright © 2018年 CJH. All rights reserved.
+//
+/**
+ *　　　　　　　 ┏┓       ┏┓+ +
+ *　　　　　　　┏┛┻━━━━━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　 ┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 █████━█████  ┃+
+ *　　　　　　　┃　　　　　　 ┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　 ┃ + +
+ *　　　　　　　┗━━┓　　　 ┏━┛
+ *               ┃　　  ┃
+ *　　　　　　　　　┃　　  ┃ + + + +
+ *　　　　　　　　　┃　　　┃　Code is far away from     bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　         神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　 ┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━━━┳┓┏┛ + + + +
+ *　　　　　　　　　 ┃┫┫　 ┃┫┫
+ *　　　　　　　　　 ┗┻┛　 ┗┻┛+ + + +
+ */
+
+#import "HYImportantClientViewController.h"
+#import "HYMyTagsModel.h"
+
+@interface HYImportantClientViewController () <UITableViewDelegate,UITableViewDataSource>
+{
+    UIButton *rightBtn;
+}
+@property (weak, nonatomic) IBOutlet NSLayoutConstraint *deleteHeightLayout;
+@property (weak, nonatomic) IBOutlet UITableView *tableView;
+
+@property (nonatomic, strong) NSMutableArray *dataArr;
+
+/**
+ 选中的数组
+ */
+@property (nonatomic, strong) NSMutableArray *sealctDataArr;//客户的唯一标识
+@end
+
+@implementation HYImportantClientViewController
+- (IBAction)delete:(UIButton *)sender {
+    
+    MJWeakSelf;
+    ListSelectView *select_view = [[ListSelectView alloc] initWithFrame:self.view.bounds];
+    select_view.choose_type = ONLYTEXTTYPE;
+    select_view.isShowCancelBtn = YES;
+    select_view.isShowSureBtn = YES;
+    select_view.isShowTitle = YES;
+    select_view.sureBtn_title_color = hexColor(ff4e00);
+    select_view.content_text = @"\n删除后，该无法查看该标签下的船舶\n";
+    select_view.sureBtn_title = @"确认";
+    select_view.cancelBtn_title = @"取消";
+    select_view.sureBtn_title_color = hexColor(ff4e00);
+    select_view.lab_content.textAlignment = NSTextAlignmentCenter;
+    select_view.contentTextFount = 14;
+    select_view.title_height = 50;
+    [select_view addTitleArray:nil andTitleString:@"确认删除" animated:YES completionHandler:^(NSString * _Nullable string, NSInteger index) {
+        
+    } withSureButtonBlock:^{
+        NSLog(@"sure btn");
+        
+        [weakSelf deleteShipInLabelRequuestData];
+        
+    }];
+    [self.view addSubview:select_view];
+    
+    
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view from its nib.
+    self.navigationItem.title = @"客户";
+    self.tableView.tableFooterView = [[UIView alloc] initWithFrame:CGRectZero];
+    
+    rightBtn = [UIButton buttonWithTitle:@"编辑" titleColor:hexColor(323232) font:[UIFont systemFontOfSize:15] imageName:@"" target:self action:@selector(editing)];
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithCustomView:rightBtn];
+    
+    [self getlabelCorrespondShipsRequestData];
+    
+    [HYPublicClass refreshWithHeader:self.tableView refreshingBlock:^{
+        [self getlabelCorrespondShipsRequestData];
+    }];
+}
+- (void)editing
+{
+    self.tableView.editing = !self.tableView.editing;
+    if (self.tableView.isEditing) {
+        [rightBtn setTitle:@"取消" forState:UIControlStateNormal];
+        _deleteHeightLayout.constant = 40;
+    }else {
+        [rightBtn setTitle:@"编辑" forState:UIControlStateNormal];
+        _deleteHeightLayout.constant = 0;
+    }
+    
+}
+#pragma mark - UITableViewDelegate
+- (NSInteger)tableView:(UITableView *)table numberOfRowsInSection:(NSInteger)section
+{
+    return self.dataArr.count;
+}
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    return 1;
+}
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    return 80;
+}
+
+- (UITableViewCell*)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    static NSString *cellid=@"listviewid";
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellid];
+    if (cell == nil) {
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellid];
+    }
+    cell.imageView.image = [UIImage imageNamed:@"hy_bigV_img"];
+    cell.textLabel.text = self.dataArr[indexPath.row];
+    return cell;
+}
+
+-(UITableViewCellEditingStyle)tableView:(UITableView *)tableView editingStyleForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    return UITableViewCellEditingStyleDelete|UITableViewCellEditingStyleInsert;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    HYImportantClientModel *model = self.dataArr[indexPath.row];
+    [self.sealctDataArr addObject:model.ID?:@""];
+}
+- (void)tableView:(UITableView *)tableView didDeselectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    
+    HYImportantClientModel *model = self.dataArr[indexPath.row];
+    
+    [self.sealctDataArr removeObject:model.ID?:@""];
+    
+}
+- (NSMutableArray *)dataArr {
+    if (!_dataArr) {
+        _dataArr = [NSMutableArray arrayWithObjects:@"重要客户1",@"重要客户2",@"重要客户3",@"重要客户4",@"重要客户5",@"重要客户6", nil];
+    }
+    return _dataArr;
+}
+- (NSMutableArray *)sealctDataArr {
+    if (!_sealctDataArr) {
+        _sealctDataArr = [NSMutableArray arrayWithCapacity:0];
+    }
+    return _sealctDataArr;
+}
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+#pragma mark - 请求
+
+- (void)getlabelCorrespondShipsRequestData
+{
+    NSDictionary *dic = @{
+                          @"labelid":self.tagsId?:@""
+                          };
+    MJWeakSelf;
+    [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    [HYHTTPClient asynchronousPostRequest:@"label/labelCorrespondShips" parameters:dic successBlock:^(BOOL success, id data, NSString *msg) {
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+        
+        [weakSelf.tableView.mj_header endRefreshing];
+        if (success&&data) {
+            weakSelf.dataArr = [HYImportantClientModel mj_objectArrayWithKeyValuesArray:data];
+            [weakSelf.tableView reloadData];
+        }else {
+            [Global promptMessage:msg inView:self.view];
+        }
+    } failureBlock:^(NSString *description) {
+        [weakSelf.tableView.mj_header endRefreshing];
+        [Global promptMessage:description inView:self.view];
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+    }];
+}
+
+- (void)deleteShipInLabelRequuestData
+{
+    NSDictionary *dic = @{
+                          @"ids":self.sealctDataArr
+                          };
+    [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    [HYHTTPClient asynchronousPostRequest:@"label/deleteShipInLabel" parameters:dic successBlock:^(BOOL success, id data, NSString *msg) {
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+        
+        if (success&&data) {
+            [self getlabelCorrespondShipsRequestData];
+        }else {
+            [Global promptMessage:msg inView:self.view];
+        }
+    } failureBlock:^(NSString *description) {
+        [Global promptMessage:description inView:self.view];
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+    }];
+}
+@end

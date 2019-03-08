@@ -1,0 +1,375 @@
+//
+//  HYShipTrailViewController.m
+//  CJHCompetitors
+//
+//  Created by 耿建峰 on 2017/9/25.
+//  Copyright © 2017年 gengjf. All rights reserved.
+//
+
+#import "HYShipTrailViewController.h"
+
+#import <BaiduMapAPI_Map/BMKMapComponent.h>
+
+#import <BaiduMapAPI_Location/BMKLocationService.h>
+
+#import <BaiduMapAPI_Utils/BMKUtilsComponent.h>
+
+#import "HYShipsList.h"
+
+#import "HYShipInfo.h"
+
+#import "HYMapPointAnnotion.h"
+
+#import "HYAnnotationView.h"
+
+#import "HYTrailPointAnnotion.h"
+
+#import "HYTrailAnnotationView.h"
+
+#import "HYTrailStartPointAnnotion.h"
+
+#import "HYTrailStartAnnotationView.h"
+
+#import "HYTrailEndPointAnnotion.h"
+
+#import "HYTrailEndAnnotationView.h"
+
+@interface HYShipTrailViewController () <BMKMapViewDelegate,
+BMKLocationServiceDelegate
+>
+
+@property (nonatomic, strong) IBOutlet BMKMapView *mapView;
+
+// 在地图上绘制的折线
+@property (nonatomic, strong) BMKPolyline *routeLine;
+
+@property (nonatomic, strong) IBOutlet UIButton *button_normal;
+@property (nonatomic, strong) IBOutlet UIButton *button_satellite;
+
+@property (weak, nonatomic) IBOutlet UILabel *label_ship_name;
+@property (weak, nonatomic) IBOutlet UILabel *label_mmsi;
+@property (weak, nonatomic) IBOutlet UILabel *label_class_type;
+@property (weak, nonatomic) IBOutlet UILabel *label_speed;
+@property (weak, nonatomic) IBOutlet UILabel *label_course;
+@property (weak, nonatomic) IBOutlet UILabel *label_state;
+@property (weak, nonatomic) IBOutlet UILabel *label_length;
+@property (weak, nonatomic) IBOutlet UILabel *label_width;
+@property (weak, nonatomic) IBOutlet UILabel *label_draft;
+@property (weak, nonatomic) IBOutlet UILabel *label_utc;
+
+@property (nonatomic, strong) HYShipsList *list;
+
+@end
+
+@implementation HYShipTrailViewController
+
+- (void)viewDidLoad {
+ 
+    [super viewDidLoad];
+    
+    self.title = @"历史轨迹";
+    
+    [self makeSubViews];
+    
+    [self fetchShipTrail];
+}
+
+- (void)makeSubViews {
+    
+    self.view.backgroundColor = [UIColor whiteColor];
+    
+    self.extendedLayoutIncludesOpaqueBars = NO;
+    
+    if ([self respondsToSelector:@selector(setEdgesForExtendedLayout:)]) {
+        self.edgesForExtendedLayout = UIRectEdgeNone;
+    }
+    
+    self.hy_interactivePopDisabled = YES;
+    
+    self.mapView.delegate = self;
+    
+    self.mapView.rotateEnabled = NO;
+    
+    // 兴隆洲服务区
+    BMKCoordinateRegion region;
+    region.center = CLLocationCoordinate2DMake(32.19039724509582, 119.03086213172625);
+    region.span.latitudeDelta  = 0.2;
+    region.span.longitudeDelta = 0.2;
+    self.mapView.region = region;
+    
+    // 卫星地图
+    self.mapView.mapType = BMKMapTypeSatellite;
+    
+    self.mapView.showsUserLocation = YES;//显示定位图层
+    
+    // 默认显示船舶当前位置
+    CLLocationCoordinate2D coordinate_setting = CLLocationCoordinate2DMake(self.ship.latitude, self.ship.longitude);
+    
+    NSString *title = ![NSString dp_isEmptyString:self.ship.chName] ? self.ship.chName : (![NSString dp_isEmptyString:self.ship.shipName] ? self.ship.shipName : self.ship.mmsi);
+    
+    // 终点
+    HYTrailEndPointAnnotion *pointAnnotation = [[HYTrailEndPointAnnotion alloc] init];
+    pointAnnotation.coordinate = coordinate_setting;
+    pointAnnotation.title = title;
+    pointAnnotation.ship = self.ship;
+    
+    [self.mapView addAnnotation:pointAnnotation];
+    
+    self.label_ship_name.text = title;
+    
+    self.label_mmsi.text = [NSString stringWithFormat:@"MMSI：%@", self.ship.mmsi];
+    self.label_class_type.text = [NSString stringWithFormat:@"船舶类型：%@", [[HYShipManager sharedManager] cargoTypeCh:self.ship.cargoType]];
+    self.label_speed.text = [NSString stringWithFormat:@"航速：%.0fkm/h", self.ship.speed];
+    self.label_course.text = [NSString stringWithFormat:@"航向：%.02f", self.ship.course];
+    self.label_state.text = [NSString stringWithFormat:@"状态：%@", [[HYShipManager sharedManager] stateCh:self.ship.status]];
+    self.label_length.text = [NSString stringWithFormat:@"船长：%ld米", self.ship.length];
+    self.label_width.text = [NSString stringWithFormat:@"船宽：%ld米", self.ship.width];
+    self.label_draft.text = [NSString stringWithFormat:@"吃水：%ld米", self.ship.draft];
+    self.label_utc.text = [NSString stringWithFormat:@"最后更新时间：%@", [NSDate dateWithTimeIntervalSince1970:self.ship.utc.doubleValue / 1000].string];
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    
+    [super viewWillAppear:animated];
+    
+    [self.mapView viewWillAppear];
+    self.mapView.delegate = self;
+}
+
+- (void)viewWillDisappear:(BOOL)animated {
+    
+    [super viewWillDisappear:animated];
+    
+    [self.mapView viewWillDisappear];
+    
+    self.mapView.delegate = nil;
+}
+
+- (void)fetchShipTrail {
+    
+    NSString *url = @"/ais/shipTrail";
+    
+    NSDictionary *params = @{
+                             @"token" : HYNONNil([HYManager sharedManager].currentUser.token),
+                             @"mmsi" : self.ship.mmsi,
+                             };
+    
+    WEAKSELF
+    
+    [HYHttpManager postRequestWithUrl:url params:params parserClass:[HYShipsList class] successBlock:^(id response) {
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+            
+            [weakSelf.mapView removeAnnotations:self.mapView.annotations];
+            
+            weakSelf.list = response;
+            
+            if (!weakSelf.list || !weakSelf.list.data || weakSelf.list.data.count == 0) {
+                
+                return;
+            }
+            
+            [weakSelf configureRoutes];
+            
+            for (HYShipInfo *info in weakSelf.list.data) {
+
+                CLLocationCoordinate2D coordinate_setting = CLLocationCoordinate2DMake(info.latitude, info.longitude);
+
+                NSString *title = ![NSString dp_isEmptyString:info.chName] ? info.chName : (![NSString dp_isEmptyString:info.shipName] ? info.shipName : info.mmsi);
+
+                NSInteger index = [weakSelf.list.data indexOfObject:info];
+                
+                if (index == 0) {
+                    // 终点
+                    HYTrailEndPointAnnotion *pointAnnotation = [[HYTrailEndPointAnnotion alloc] init];
+                    pointAnnotation.coordinate = coordinate_setting;
+                    pointAnnotation.title = title;
+                    pointAnnotation.ship = info;
+                    
+                    [weakSelf.mapView addAnnotation:pointAnnotation];
+                }
+                else if (index == (weakSelf.list.data.count - 1)) {
+                    // 起点
+                    HYTrailStartPointAnnotion *pointAnnotation = [[HYTrailStartPointAnnotion alloc] init];
+                    pointAnnotation.coordinate = coordinate_setting;
+                    pointAnnotation.title = title;
+                    pointAnnotation.ship = info;
+                    
+                    [weakSelf.mapView addAnnotation:pointAnnotation];
+                }
+                else {
+                    
+                    HYTrailPointAnnotion *pointAnnotation = [[HYTrailPointAnnotion alloc] init];
+                    pointAnnotation.coordinate = coordinate_setting;
+                    pointAnnotation.title = title;
+                    pointAnnotation.ship = info;
+                    
+                    [weakSelf.mapView addAnnotation:pointAnnotation];
+                }
+            }
+        });
+        
+    } failBlock:^(NSError *error) {
+        
+    }];
+}
+
+- (void)configureRoutes {
+    
+    if (self.list.data.count == 0) return;
+    
+    // 1、分配内存空间给存储经过点的数组
+    BMKMapPoint *pointArray = (BMKMapPoint *)malloc(sizeof(CLLocationCoordinate2D) * self.list.data.count);
+    
+    // 2、创建坐标点并添加到数组中
+    for(int idx = 0; idx < self.list.data.count; idx++) {
+        
+        HYShipInfo *info = [self.list.data objectAtIndex:idx];
+        CLLocationDegrees latitude  = info.latitude;
+        CLLocationDegrees longitude = info.longitude;
+        CLLocationCoordinate2D coordinate = CLLocationCoordinate2DMake(latitude, longitude);
+        BMKMapPoint point = BMKMapPointForCoordinate(coordinate);
+        pointArray[idx] = point;
+    }
+    // 3、防止重复绘制
+    if (self.routeLine) {
+        //在地图上移除已有的坐标点
+        [self.mapView removeOverlay:self.routeLine];
+    }
+    
+    // 4、画线
+    self.routeLine = [BMKPolyline polylineWithPoints:pointArray count:self.list.data.count];
+    
+    // 5、将折线(覆盖)添加到地图
+    if (nil != self.routeLine) {
+        [self.mapView addOverlay:self.routeLine];
+    }
+    
+    // 6、清楚分配的内存
+    free(pointArray);
+    
+    
+    // 设置显示未知
+    HYShipInfo *info = [self.list.data objectAtIndex:0];
+    BMKCoordinateRegion region;
+    region.center = CLLocationCoordinate2DMake(info.latitude, info.longitude);
+    region.span.latitudeDelta  = 0.2;
+    region.span.longitudeDelta = 0.2;
+    self.mapView.region = region;
+}
+
+#pragma mark - Action method
+
+- (IBAction)showNormal:(id)sender {
+    
+    // 标准地图
+    self.mapView.mapType = BMKMapTypeStandard;
+    
+    self.button_normal.selected = YES;
+    self.button_satellite.selected = NO;
+}
+
+- (IBAction)showSatellite:(id)sender {
+    
+    // 卫星地图
+    self.mapView.mapType = BMKMapTypeSatellite;
+    self.button_normal.selected = NO;
+    self.button_satellite.selected = YES;
+}
+
+#pragma mark - method
+
+- (BMKOverlayView *)mapView:(BMKMapView *)mapView viewForOverlay:(id<BMKOverlay>)overlay {
+    
+    if ([overlay isKindOfClass:[BMKPolyline class]]) {
+        
+        BMKPolylineView *polylineView = [[BMKPolylineView alloc] initWithPolyline:overlay];
+        // 设置划出的轨迹的基本属性-->也是使得定位看起来更加准确的主要原因
+        polylineView.strokeColor = [[UIColor blueColor]colorWithAlphaComponent:0.5];
+        polylineView.fillColor = [[UIColor blueColor]colorWithAlphaComponent:0.8];
+        polylineView.lineWidth = 0.5;
+        return polylineView;
+    }
+    return nil;
+}
+
+// 根据anntation生成对应的View
+- (BMKAnnotationView *)mapView:(BMKMapView *)mapView viewForAnnotation:(id <BMKAnnotation>)annotation {
+
+    if ([annotation isKindOfClass:[HYTrailStartPointAnnotion class]]) {
+        // 起点
+        HYMapPointAnnotion *ann = (HYMapPointAnnotion *)annotation;
+        
+        HYTrailStartAnnotationView *annotationView = (HYTrailStartAnnotationView *)[mapView dequeueReusableAnnotationViewWithIdentifier:@"HYTrailStartAnnotationView"];
+        
+        if (annotationView == nil) {
+            
+            annotationView = [[HYTrailStartAnnotationView alloc] initWithAnnotation:annotation reuseIdentifier:@"HYTrailStartAnnotationView"];
+        }
+        
+        UIImage *image = [UIImage imageNamed:@"icon_start"];
+        
+        annotationView.image = image;
+        
+        annotationView.canShowCallout = NO;
+        
+        annotationView.title = [NSDate dateWithTimeIntervalSince1970:ann.ship.utc.doubleValue].string;
+        
+        return annotationView;
+    }
+    if ([annotation isKindOfClass:[HYTrailEndPointAnnotion class]]) {
+        // 终点
+        HYTrailEndPointAnnotion *ann = (HYTrailEndPointAnnotion *)annotation;
+        
+        HYTrailEndAnnotationView *annotationView = (HYTrailEndAnnotationView *)[mapView dequeueReusableAnnotationViewWithIdentifier:@"HYTrailEndAnnotationView"];
+        
+        if (annotationView == nil) {
+            
+            annotationView = [[HYTrailEndAnnotationView alloc] initWithAnnotation:annotation reuseIdentifier:@"HYTrailEndAnnotationView"];
+        }
+        
+        UIImage *image = [UIImage imageNamed:@"icon_end"];
+        
+        annotationView.image = image;
+        
+        annotationView.canShowCallout = NO;
+        
+        annotationView.title = [NSDate dateWithTimeIntervalSince1970:ann.ship.utc.doubleValue].string;
+        
+        return annotationView;
+    }
+    else if ([annotation isKindOfClass:[HYTrailPointAnnotion class]]) {
+        // 中间
+        
+        HYMapPointAnnotion *ann = (HYMapPointAnnotion *)annotation;
+        
+        HYTrailAnnotationView *annotationView = (HYTrailAnnotationView *)[mapView dequeueReusableAnnotationViewWithIdentifier:@"HYTrailAnnotationView"];
+        
+        if (annotationView == nil) {
+            
+            annotationView = [[HYTrailAnnotationView alloc] initWithAnnotation:annotation reuseIdentifier:@"HYTrailAnnotationView"];
+        }
+        
+        UIImage *image = [UIImage imageNamed:@"icon_cycle"];
+        
+        annotationView.image = image;
+        
+        annotationView.canShowCallout = NO;
+        
+        annotationView.title = [NSDate dateWithTimeIntervalSince1970:ann.ship.utc.doubleValue].string;
+        
+        return annotationView;
+    }
+    return nil;
+}
+
+#pragma mark - Properties
+
+#pragma mark -
+
+- (void)dealloc {
+    
+    self.mapView = nil;
+}
+
+@end

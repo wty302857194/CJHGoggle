@@ -1,0 +1,310 @@
+//
+//  HYUserCenterViewController.m
+//  CJHGoggle
+//
+//  Created by 吴棒棒 on 2018/8/2.
+//  Copyright © 2018年 CJH. All rights reserved.
+//
+/**
+ *　　　　　　　 ┏┓       ┏┓+ +
+ *　　　　　　　┏┛┻━━━━━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　 ┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 █████━█████  ┃+
+ *　　　　　　　┃　　　　　　 ┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　 ┃ + +
+ *　　　　　　　┗━━┓　　　 ┏━┛
+ *               ┃　　  ┃
+ *　　　　　　　　　┃　　  ┃ + + + +
+ *　　　　　　　　　┃　　　┃　Code is far away from     bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　         神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　 ┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━━━┳┓┏┛ + + + +
+ *　　　　　　　　　 ┃┫┫　 ┃┫┫
+ *　　　　　　　　　 ┗┻┛　 ┗┻┛+ + + +
+ */
+
+#import "HYUserCenterViewController.h"
+#import "HYMessageCenterViewController.h"
+#import "HYUserCollectionViewCell.h"
+#import "HYSetingViewController.h"
+#import "HYMyTagsViewController.h"
+#import "HYAnnounceViewController.h"
+#import "HYPublicSeaPoolViewController.h"
+#import "HYMyShipViewController.h"
+#import "HYUCRemindVC.h"
+#import "HYUserCenterModel.h"
+
+static NSString * const HeaderViewIndentifier = @"storeCellIndentifier";
+
+
+typedef void(^HeadViewTabBlock)(void);
+
+@interface HYUserCollectionHeaderView : UICollectionReusableView
+
+@property (nonatomic,copy) HeadViewTabBlock headViewTabBlock;
+@property (nonatomic,strong) UIButton *userBtn;
+@end
+
+@implementation HYUserCollectionHeaderView
+
+- (void)awakeFromNib {
+    [super awakeFromNib];
+    // Initialization code
+}
+
+- (id)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        self.backgroundColor = hexColor(ff4e00);
+        [self creatTabbarView];
+    }
+    return self;
+}
+
+- (void)creatTabbarView
+{
+    NSArray *arr = @[@"user_dianxiao",@"user_fenXiao",@"user_zhixiao",@"user_big_kehu",@"user_guanLiYuan"];
+
+    
+    float y_height = 140;
+    UIView *view = [[UIView alloc] init];
+    [self addSubview:view];
+    [view mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerX.equalTo(self.mas_centerX);
+        make.centerY.equalTo(self.mas_centerY).multipliedBy(1/1.2);
+        make.width.height.mas_equalTo(y_height);
+    }];
+    
+    _userBtn = [UIButton buttonWithTitle:nil titleColor:nil font:nil imageName:@"" target:self action:@selector(userImg)];
+    
+    NSInteger sign = [[[HYManager sharedManager] currentUser].departmentid integerValue];
+    if (sign>0) {
+        [_userBtn setBackgroundImage:[UIImage imageNamed:arr[sign-1]] forState:UIControlStateNormal];
+    }
+    [view addSubview:_userBtn];
+    [_userBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.mas_equalTo(5);
+        make.right.mas_equalTo(-20);
+        make.left.mas_equalTo(20);
+        make.height.equalTo(self.userBtn.mas_width);
+    }];
+    
+    UILabel *textLab = [[UILabel alloc] init];
+    textLab.text = [NSString stringWithFormat:@"%@ %@", [[HYManager sharedManager] currentUser].realname, [[HYManager sharedManager] currentUser].departmentname];
+    textLab.textColor = [UIColor whiteColor];
+    textLab.textAlignment = NSTextAlignmentCenter;
+    textLab.font = [UIFont systemFontOfSize:15];
+    [view addSubview:textLab];
+    [textLab mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerX.equalTo(self.userBtn.mas_centerX);
+        make.bottom.mas_equalTo(0);
+    }];
+}
+
+- (void)userImg {
+    if (self.headViewTabBlock) {
+        self.headViewTabBlock();
+    }
+}
+
+@end
+
+@interface HYUserCenterViewController ()<UICollectionViewDelegate,UICollectionViewDataSource>
+
+@property (weak, nonatomic) IBOutlet UICollectionView *collectionView;
+@property (nonatomic, strong) HYUserCollectionHeaderView *userCollectionHeaderView;
+
+@property (nonatomic, copy) NSArray *dataArr;//数据源
+
+
+@end
+
+@implementation HYUserCenterViewController
+
+#pragma mark - 导航栏自定义
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    [self.navigationController.navigationBar setBackgroundImage:[UIImage new] forBarMetrics:UIBarMetricsDefault];
+    [self.navigationController.navigationBar setShadowImage:[UIImage new]];
+
+    self.navigationController.navigationBar.barTintColor = hexColor(ff4e00);
+    self.navigationController.navigationBar.translucent = NO;
+    
+    [UIApplication sharedApplication].statusBarStyle = UIStatusBarStyleLightContent;
+
+}
+- (void)viewWillDisappear:(BOOL)animated {
+    [super viewWillDisappear:animated];
+    [self.navigationController.navigationBar setBackgroundImage:nil forBarMetrics:UIBarMetricsDefault];
+    [self.navigationController.navigationBar setShadowImage:nil];
+    self.navigationController.navigationBar.barTintColor = [UIColor whiteColor];
+    self.navigationController.navigationBar.translucent = YES;
+    
+    [UIApplication sharedApplication].statusBarStyle = UIStatusBarStyleDefault;
+
+}
+#pragma mark - 初始化数据
+- (void)initWithData
+{
+    NSDictionary *dataDict = [NSDictionary dictionaryWithContentsOfFile:[[NSBundle mainBundle] pathForResource:@"UserCenterMessage" ofType:@"plist"]];
+    NSMutableArray *arr = [NSMutableArray arrayWithArray:dataDict[@"data"]];
+    [arr enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        NSDictionary *dic = obj;
+        
+        if (![[HYManager sharedManager] currentUser].publish_notice&&[dic[@"typeId"] integerValue] == 0) {
+            [arr removeObject:dic];
+        }
+        if (![[HYManager sharedManager] currentUser].my_label&&[dic[@"typeId"] integerValue] == 1) {
+            [arr removeObject:dic];
+        }
+        if (![[HYManager sharedManager] currentUser].my_ship&&[dic[@"typeId"] integerValue] == 4) {
+            [arr removeObject:dic];
+        }
+    }];
+    NSLog(@"arr===%@",arr);
+    
+    self.dataArr = [HYUserCenterModel mj_objectArrayWithKeyValuesArray:arr];
+    
+}
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    UIButton *leftBtn = [UIButton buttonWithTitle:@" 设置" titleColor:[UIColor whiteColor] font:[UIFont systemFontOfSize:15] imageName:@"hy_setingImg" target:self action:@selector(seting)];
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithCustomView:leftBtn];
+    
+    UIButton *rightBtn = [UIButton buttonWithTitle:nil titleColor:[UIColor whiteColor] font:[UIFont systemFontOfSize:15] imageName:@"hy_user_message" target:self action:@selector(messages)];
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithCustomView:rightBtn];
+    
+    
+    [self.collectionView registerNib:[UINib nibWithNibName:@"HYUserCollectionViewCell" bundle:nil] forCellWithReuseIdentifier:@"CollectionCell"];
+    [self.collectionView registerClass:[HYUserCollectionHeaderView class] forSupplementaryViewOfKind:UICollectionElementKindSectionHeader withReuseIdentifier:HeaderViewIndentifier];
+    
+    
+    [self initWithData];
+}
+- (void)seting
+{
+    HYSetingViewController *remindVC = [[HYSetingViewController alloc] init];
+    [self.navigationController pushViewController:remindVC animated:YES];
+}
+- (void)messages
+{
+    HYMessageCenterViewController *viewController = [[HYMessageCenterViewController alloc] init];
+    [self pushNewViewController:viewController];
+}
+//返回每个分区的item个数
+-(NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section
+{
+    return self.dataArr.count;
+}
+//返回每个item
+-(UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath
+{
+    HYUserCollectionViewCell * cell  = [collectionView dequeueReusableCellWithReuseIdentifier:@"CollectionCell" forIndexPath:indexPath];
+    
+    if (indexPath.row < self.dataArr.count) {
+        cell.userCenterModel = self.dataArr[indexPath.row];
+
+    }
+    return cell;
+}
+- (UIEdgeInsets)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout*)collectionViewLayout insetForSectionAtIndex:(NSInteger)section
+{
+    return  UIEdgeInsetsMake(10, 10, 10, 10);
+}
+//返回cell的宽和高
+-(CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewFlowLayout *)collectionViewLayout sizeForItemAtIndexPath:(NSIndexPath *)indexPath
+{
+    return  CGSizeMake((kScreenWidth-41)/3.f,(kScreenWidth-41)/3.f+30);
+}
+//每行cell之间的间隔`
+- (CGFloat)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout*)collectionViewLayout minimumLineSpacingForSectionAtIndex:(NSInteger)section
+{
+    return 10;
+}
+// 列宽是系统自己计算的
+- (CGFloat)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout*)collectionViewLayout minimumInteritemSpacingForSectionAtIndex:(NSInteger)section
+{
+    return 10;
+}
+- (UICollectionReusableView *)collectionView:(UICollectionView *)collectionView viewForSupplementaryElementOfKind:(NSString *)kind atIndexPath:(NSIndexPath *)indexPath{
+    if (kind == UICollectionElementKindSectionHeader)
+    {
+        _userCollectionHeaderView = [collectionView  dequeueReusableSupplementaryViewOfKind:UICollectionElementKindSectionHeader withReuseIdentifier:HeaderViewIndentifier forIndexPath:indexPath];
+//        __weak typeof(self) weakSelf = self;
+        _userCollectionHeaderView.headViewTabBlock= ^{
+            NSLog(@"点击用户头像");
+        };
+        
+        return _userCollectionHeaderView;
+    }
+    return nil;
+}
+- (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout referenceSizeForHeaderInSection:(NSInteger)section {
+    return CGSizeMake(kScreenWidth, 160);
+}
+
+
+- (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath
+{
+    HYUserCenterModel *model = self.dataArr[indexPath.row];
+    switch ([model.typeId integerValue]) {
+        case 0:
+        {
+            HYAnnounceViewController *myTagsVC = [[HYAnnounceViewController alloc] init];
+            [self.navigationController pushViewController:myTagsVC animated:YES];
+            
+        }
+            break;
+        case 1:
+        {
+            HYMyTagsViewController *myTagsVC = [[HYMyTagsViewController alloc] init];
+            [self.navigationController pushViewController:myTagsVC animated:YES];
+        }
+            break;
+        case 2:
+        {
+            HYPublicSeaPoolViewController *myTagsVC = [[HYPublicSeaPoolViewController alloc] init];
+            [self.navigationController pushViewController:myTagsVC animated:YES];
+        }
+            break;
+        case 3:
+        {
+            HYUCRemindVC *myTagsVC = [[HYUCRemindVC alloc] init];
+            [self.navigationController pushViewController:myTagsVC animated:YES];
+            
+        }
+            break;
+        case 4:
+        {
+            HYMyShipViewController *myTagsVC = [[HYMyShipViewController alloc] init];
+            [self.navigationController pushViewController:myTagsVC animated:YES];
+        }
+            break;
+        default:
+            break;
+    }
+}
+#pragma mark - ======懒加载=====
+
+- (NSArray *)dataArr {
+    if (!_dataArr) {
+        _dataArr = @[];
+    }
+    return _dataArr;
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+
+@end

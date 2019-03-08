@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="14113" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
+    <device id="retina4_7" orientation="portrait">
+        <adaptation id="fullscreen"/>
+    </device>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="14088"/>
+        <capability name="Aspect ratio constraints" minToolsVersion="5.1"/>
+        <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner"/>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <tableViewCell contentMode="scaleToFill" selectionStyle="default" accessoryType="disclosureIndicator" indentationWidth="10" reuseIdentifier="listviewid" rowHeight="68" id="KGk-i7-Jjw" customClass="HYMyAreaTableViewCell">
+            <rect key="frame" x="0.0" y="0.0" width="320" height="68"/>
+            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+            <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" tableViewCell="KGk-i7-Jjw" id="H2p-sc-9uM">
+                <rect key="frame" x="0.0" y="0.0" width="286" height="67.5"/>
+                <autoresizingMask key="autoresizingMask"/>
+                <subviews>
+                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="最近靠泊：兴隆洲" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="V5x-IS-ovM">
+                        <rect key="frame" x="52.5" y="40.5" width="114.5" height="17"/>
+                        <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                        <color key="textColor" red="0.1960784314" green="0.1960784314" blue="0.1960784314" alpha="1" colorSpace="calibratedRGB"/>
+                        <nil key="highlightedColor"/>
+                    </label>
+                    <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="hy_importantClient_img" translatesAutoresizingMaskIntoConstraints="NO" id="LF3-Hm-ROA">
+                        <rect key="frame" x="10" y="15" width="37.5" height="37.5"/>
+                        <constraints>
+                            <constraint firstAttribute="width" secondItem="LF3-Hm-ROA" secondAttribute="height" multiplier="1:1" id="h1Z-u6-LrK"/>
+                        </constraints>
+                    </imageView>
+                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="【区域一】" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="zTi-fx-2mj">
+                        <rect key="frame" x="52.5" y="10" width="71.5" height="17"/>
+                        <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                        <color key="textColor" red="1" green="0.30588235289999999" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <nil key="highlightedColor"/>
+                    </label>
+                </subviews>
+                <constraints>
+                    <constraint firstAttribute="bottom" secondItem="V5x-IS-ovM" secondAttribute="bottom" constant="10" id="FoS-lK-Wf5"/>
+                    <constraint firstItem="zTi-fx-2mj" firstAttribute="leading" secondItem="LF3-Hm-ROA" secondAttribute="trailing" constant="5" id="P39-iH-HqA"/>
+                    <constraint firstItem="LF3-Hm-ROA" firstAttribute="leading" secondItem="H2p-sc-9uM" secondAttribute="leading" constant="10" id="X4F-Mp-beE"/>
+                    <constraint firstAttribute="bottom" secondItem="LF3-Hm-ROA" secondAttribute="bottom" constant="15" id="YPB-W7-G2q"/>
+                    <constraint firstItem="LF3-Hm-ROA" firstAttribute="top" secondItem="H2p-sc-9uM" secondAttribute="top" constant="15" id="boi-8I-ieY"/>
+                    <constraint firstItem="V5x-IS-ovM" firstAttribute="leading" secondItem="zTi-fx-2mj" secondAttribute="leading" id="dgm-Su-W5w"/>
+                    <constraint firstItem="zTi-fx-2mj" firstAttribute="top" secondItem="H2p-sc-9uM" secondAttribute="top" constant="10" id="jWo-DT-FOq"/>
+                </constraints>
+            </tableViewCellContentView>
+            <viewLayoutGuide key="safeArea" id="aW0-zy-SZf"/>
+            <connections>
+                <outlet property="contentLab" destination="V5x-IS-ovM" id="ihC-mW-KKy"/>
+                <outlet property="imgView" destination="LF3-Hm-ROA" id="2rR-9g-mle"/>
+                <outlet property="nameLab" destination="zTi-fx-2mj" id="rY2-4j-Bya"/>
+            </connections>
+            <point key="canvasLocation" x="34" y="66"/>
+        </tableViewCell>
+    </objects>
+    <resources>
+        <image name="hy_importantClient_img" width="35" height="35"/>
+    </resources>
+</document>

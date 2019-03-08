@@ -1,0 +1,94 @@
+//
+//  HYMoorShipTableViewCell.m
+//  CJHGoggle
+//
+//  Created by 吴棒棒 on 2018/8/9.
+//  Copyright © 2018年 CJH. All rights reserved.
+//
+/**
+ *　　　　　　　 ┏┓       ┏┓+ +
+ *　　　　　　　┏┛┻━━━━━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　 ┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 █████━█████  ┃+
+ *　　　　　　　┃　　　　　　 ┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　 ┃ + +
+ *　　　　　　　┗━━┓　　　 ┏━┛
+ *               ┃　　  ┃
+ *　　　　　　　　　┃　　  ┃ + + + +
+ *　　　　　　　　　┃　　　┃　Code is far away from     bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　         神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　 ┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━━━┳┓┏┛ + + + +
+ *　　　　　　　　　 ┃┫┫　 ┃┫┫
+ *　　　　　　　　　 ┗┻┛　 ┗┻┛+ + + +
+ */
+
+#import "HYMoorShipTableViewCell.h"
+
+#import "HYMoorShipTableViewCell.h"
+
+#import "HYMoorShipModel.h"
+
+@interface HYMoorShipTableViewCell ()
+
+@property (nonatomic, strong) HYMoorShipModel *model;
+
+@end
+
+@implementation HYMoorShipTableViewCell
+
+- (void)awakeFromNib {
+    [super awakeFromNib];
+    // Initialization code
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
+- (void)prepareForReuse {
+    
+    [super prepareForReuse];
+    
+    self.model = nil;
+    self.imgView.image = nil;
+    self.shipNameLab.text = nil;
+    self.contentLab.text = nil;
+}
+
+- (void)bindWithModel:(id)model {
+    
+    if (model && [model isKindOfClass:[HYMoorShipModel class]]) {
+        
+        self.model = model;
+        
+        UIImage *image = [UIImage imageNamed:@"ship_default_right"];
+        
+        NSInteger cjhState = self.model.cjhState.integerValue;
+        
+        if (cjhState == 1) {
+            
+            image = [UIImage imageNamed:@"cjh_p_right"];
+        }
+        else if (cjhState == 2) {
+            
+            image = [UIImage imageNamed:@"cjh_v_right"];
+        }
+        
+        self.imgView.image = image;
+        
+        self.shipNameLab.text = self.model.shipName;
+        
+        self.contentLab.text = [NSString stringWithFormat:@"最近靠泊：%@ %@", self.model.siteName, [NSDate dateWithTimeIntervalSince1970:self.model.moorStartTime.doubleValue/1000].string];
+    }
+}
+
+@end

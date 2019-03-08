@@ -1,0 +1,190 @@
+//
+//  HYMyTagsViewController.m
+//  CJHGoggle
+//
+//  Created by 吴棒棒 on 2018/8/8.
+//  Copyright © 2018年 CJH. All rights reserved.
+//
+/**
+ *　　　　　　　 ┏┓       ┏┓+ +
+ *　　　　　　　┏┛┻━━━━━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　 ┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 █████━█████  ┃+
+ *　　　　　　　┃　　　　　　 ┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　 ┃ + +
+ *　　　　　　　┗━━┓　　　 ┏━┛
+ *               ┃　　  ┃
+ *　　　　　　　　　┃　　  ┃ + + + +
+ *　　　　　　　　　┃　　　┃　Code is far away from     bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　         神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　 ┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━━━┳┓┏┛ + + + +
+ *　　　　　　　　　 ┃┫┫　 ┃┫┫
+ *　　　　　　　　　 ┗┻┛　 ┗┻┛+ + + +
+ */
+
+#import "HYMyTagsViewController.h"
+#import "HYImportantClientViewController.h"
+#import "HYMyTagsModel.h"
+
+@interface HYMyTagsViewController ()<UITableViewDelegate,UITableViewDataSource>
+@property (weak, nonatomic) IBOutlet UITableView *tableView;
+@property (nonatomic, strong) NSMutableArray *dataArr;
+@end
+
+@implementation HYMyTagsViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+
+    self.navigationItem.title = @"我的标签";
+    self.tableView.tableFooterView = [[UIView alloc] initWithFrame:CGRectZero];
+
+    WEAKSELF;
+    [HYPublicClass refreshWithHeader:self.tableView refreshingBlock:^{
+        [weakSelf getUserLabelsRequestData];
+    }];
+}
+#pragma mark - UITableViewDelegate
+- (NSInteger)tableView:(UITableView *)table numberOfRowsInSection:(NSInteger)section
+{
+    return self.dataArr.count;
+}
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    return 1;
+}
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    return 50;
+}
+
+- (UITableViewCell*)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    static NSString *cellid = @"listviewid";
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellid];
+    if (cell == nil) {
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:cellid];
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+        cell.textLabel.textColor = hexColor(323232);
+        cell.detailTextLabel.textColor = hexColor(ff4e00);
+    }
+    
+    HYMyTagsModel *model = self.dataArr[indexPath.row];
+    cell.textLabel.text = model.name?:@"";
+    cell.detailTextLabel.text = model.qty?:@"0";
+    
+    return cell;
+}
+-(void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    
+    if (editingStyle == UITableViewCellEditingStyleDelete) {
+        
+        MJWeakSelf;
+        ListSelectView *select_view = [[ListSelectView alloc] initWithFrame:self.view.bounds];
+        select_view.choose_type = ONLYTEXTTYPE;
+        select_view.isShowCancelBtn = YES;
+        select_view.isShowSureBtn = YES;
+        select_view.isShowTitle = YES;
+        select_view.sureBtn_title_color = hexColor(ff4e00);
+        select_view.content_text = @"\n删除后，该无法查看该标签下的船舶\n";
+        select_view.sureBtn_title = @"确认";
+        select_view.cancelBtn_title = @"取消";
+        select_view.sureBtn_title_color = hexColor(ff4e00);
+        select_view.lab_content.textAlignment = NSTextAlignmentCenter;
+        select_view.contentTextFount = 14;
+        select_view.title_height = 50;
+        [select_view addTitleArray:nil andTitleString:@"确认删除" animated:YES completionHandler:^(NSString * _Nullable string, NSInteger index) {
+            
+        } withSureButtonBlock:^{
+            NSLog(@"sure btn");
+//            [weakSelf.dataArr removeObjectAtIndex:indexPath.row];
+//            [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationBottom];
+            [weakSelf deleteLabelRequuestData:indexPath];
+        }];
+        [self.view addSubview:select_view];
+    }
+}
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    
+    HYMyTagsModel *model = self.dataArr[indexPath.row];
+
+    HYImportantClientViewController *vc = [[HYImportantClientViewController alloc] init];
+    vc.title = model.name;
+    vc.tagsId = model.ID;
+    [self.navigationController pushViewController:vc animated:YES];
+}
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+- (NSMutableArray *)dataArr {
+    if (!_dataArr) {
+        _dataArr = [NSMutableArray arrayWithCapacity:0];
+    }
+    return _dataArr;
+}
+
+#pragma mark - 请求
+
+
+- (void)getUserLabelsRequestData
+{
+    [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    WEAKSELF
+    [HYHTTPClient asynchronousPostRequest:@"label/getLabelShipQty" parameters:nil successBlock:^(BOOL success, id data, NSString *msg) {
+        [MBProgressHUD hideHUDForView:weakSelf.view animated:YES];
+        [weakSelf.tableView.mj_header endRefreshing];
+        if (success&&data) {
+            NSArray *arr = (NSArray *)data;
+            if (arr&&arr.count>0) {
+                weakSelf.dataArr = [HYMyTagsModel mj_objectArrayWithKeyValuesArray:data];
+                [weakSelf.tableView reloadData];
+            }else {
+                NSLog(@"加载空视图");
+            }
+        }else {
+            [Global promptMessage:msg inView:weakSelf.view];
+        }
+    } failureBlock:^(NSString *description) {
+        [Global promptMessage:description inView:weakSelf.view];
+        [MBProgressHUD hideHUDForView:weakSelf.view animated:YES];
+        [self.tableView.mj_header endRefreshing];
+    }];
+}
+- (void)deleteLabelRequuestData:(NSIndexPath *)indexPath
+{
+    HYMyTagsModel *model = self.dataArr[indexPath.row];
+
+    NSDictionary *dic = @{
+                          @"labelid":model.ID?:@""
+                          };
+    [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    
+    WEAKSELF
+    [HYHTTPClient asynchronousPostRequest:@"label/deleteLabel" parameters:dic successBlock:^(BOOL success, id data, NSString *msg) {
+        
+        [MBProgressHUD hideHUDForView:weakSelf.view animated:YES];
+        
+        if (success&&data) {
+            [Global promptMessage:msg inView:weakSelf.view];
+            
+            [weakSelf.dataArr removeObjectAtIndex:indexPath.row];
+            [weakSelf.tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationBottom];
+        }else {
+            [Global promptMessage:msg inView:weakSelf.view];
+        }
+    } failureBlock:^(NSString *description) {
+        [Global promptMessage:description inView:weakSelf.view];
+        [MBProgressHUD hideHUDForView:weakSelf.view animated:YES];
+    }];
+}
+@end

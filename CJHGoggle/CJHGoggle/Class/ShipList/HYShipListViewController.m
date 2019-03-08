@@ -1,0 +1,612 @@
+//
+//  HYShipListViewController.m
+//  CJHGoggle
+//
+//  Created by 吴棒棒 on 2018/8/2.
+//  Copyright © 2018年 CJH. All rights reserved.
+//
+/**
+ *　　　　　　　 ┏┓       ┏┓+ +
+ *　　　　　　　┏┛┻━━━━━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　 ┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 █████━█████  ┃+
+ *　　　　　　　┃　　　　　　 ┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　 ┃ + +
+ *　　　　　　　┗━━┓　　　 ┏━┛
+ *               ┃　　  ┃
+ *　　　　　　　　　┃　　  ┃ + + + +
+ *　　　　　　　　　┃　　　┃　Code is far away from     bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　         神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　 ┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━━━┳┓┏┛ + + + +
+ *　　　　　　　　　 ┃┫┫　 ┃┫┫
+ *　　　　　　　　　 ┗┻┛　 ┗┻┛+ + + +
+ */
+
+#import "HYShipListViewController.h"
+#import "HYShipMapViewController.h"
+#import "HYShipListMapViewController.h"
+#import "HYSelectView.h"
+#import "HYHYShipListTableViewCell.h"
+#import "HYShipListModel.h"
+#import "HYShipInfo.h"
+#import "HYUserLabelList.h"
+#import "HYUserLabel.h"
+
+#define HYShipListDataDEFINE       @"HYShipListViewControllerSearchHistory"
+
+@interface HYShipListViewController ()<PYSearchViewControllerDelegate> {
+    UIButton *_selectBtn;
+    
+}
+@property (weak, nonatomic) IBOutlet UITableView *tableView;
+@property (weak, nonatomic) IBOutlet UIView *leftView;
+@property (weak, nonatomic) IBOutlet UIButton *leftBtn;
+@property (weak, nonatomic) IBOutlet UILabel *leftLab;
+
+@property (nonatomic, copy) NSString *typeId;
+
+@property (nonatomic, strong) UIButton *selectBtn;
+@property (nonatomic, strong) HYSelectView *selectView;
+// 船舶类型
+@property (nonatomic, strong) NSMutableArray *array_type;
+
+@property (nonatomic, strong) PYSearchViewController *searchViewController;
+
+
+@property (nonatomic, assign) NSInteger page;//页数
+@property (nonatomic, assign) BOOL isFresh;//加载
+@property (nonatomic, strong) NSMutableArray *dataArr;
+
+@property (nonatomic, strong) NSMutableArray *dataList;//搜索结果的model数组
+@end
+
+@implementation HYShipListViewController
+
+- (void)dealloc
+{
+    [NOTIFICATION_CENTER removeObserver:self];
+}
+
+- (IBAction)downList:(UIButton *)sender {
+    
+    self.selectView.hidden = NO;
+}
+
+- (void)initWithData {
+    
+    NSMutableArray *array = [NSMutableArray array];
+    
+    for (HYUserLabel *label in self.array_type) {
+        
+        [array addObject:label.name];
+    }
+    
+    self.leftLab.text = [NSString stringWithFormat:@" %@",array[0]];
+    
+    [self.selectView bindWithModel:array];
+}
+
+- (void)viewDidLoad {
+    
+    [super viewDidLoad];
+    
+    self.navigationItem.title = @"我的船舶";
+    
+    _page = 1;
+    self.typeId = @"0";
+    _dataArr = [NSMutableArray arrayWithCapacity:0];
+    _dataList = [NSMutableArray arrayWithCapacity:0];
+    
+    //添加地图和搜索按钮
+    [self addNavigationItemWithImageNames:@[@"hy_map_img",@"ship_search_img"] titles:@[@"地图",@"搜索"] textClolr:hexColor(323232) isLeft:NO target:self action:@selector(rightItemsClick:) tags:@[@"100",@"101"]];
+    
+//    [self addNavigationItemWithImageNames:@[@"ship_search_img"] titles:@[@"搜索"] textClolr:hexColor(323232) isLeft:NO target:self action:@selector(rightItemsClick:) tags:@[@"101"]];
+    
+    
+    [self fetchMyTags];
+    
+    WEAKSELF;
+    [HYPublicClass refreshWithHeader:self.tableView refreshingBlock:^{
+        weakSelf.page = 1;
+        weakSelf.isFresh = NO;
+        [weakSelf getShipListRequestData];
+    }];
+    
+    //添加标签后刷新标签
+    [NOTIFICATION_CENTER addObserver:self selector:@selector(reloadUserLabel) name:RELOAD_USER_LABELS object:nil];
+}
+
+- (void)reloadUserLabel
+{
+    _page = 1;
+    self.typeId = @"0";
+    _dataArr = [NSMutableArray arrayWithCapacity:0];
+    _dataList = [NSMutableArray arrayWithCapacity:0];
+    
+    [self fetchMyTags];
+    
+    [self.tableView.mj_header beginRefreshing];
+}
+
+- (void)rightItemsClick:(UIButton *)btn
+{
+    if(btn.tag == 100) {
+        NSLog(@"地图");
+        if (self.dataArr&&self.dataArr.count > 0) {
+            NSMutableArray *shipArr = [NSMutableArray arrayWithCapacity:0];
+            [self.dataArr enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+                HYShipListModel *model = (HYShipListModel *)obj;
+                HYShipInfo *ship = [[HYShipInfo alloc] init];
+                ship.mmsi = model.mmsi;
+                ship.latitude = model.latitude.doubleValue;
+                ship.longitude = model.longitude.doubleValue;
+                ship.chName = model.chName;
+                ship.shipName = model.shipName;
+                ship.cjhState = model.cjhState.integerValue;
+                [shipArr addObject:ship];
+            }];
+            
+            HYShipListMapViewController *viewController = [[HYShipListMapViewController alloc] init];
+            viewController.array = shipArr;
+            [self pushNewViewController:viewController];
+        }
+        
+    }else {
+        NSLog(@"搜索");
+        self.searchViewController = [PYSearchViewController searchViewControllerWithHotSearches:nil searchBarPlaceholder:NSLocalizedString(@"请输入你的搜索内容", @"请输入你的搜索内容")];
+        self.searchViewController.hotSearchStyle = 0;
+        self.searchViewController.removeSpaceOnSearchString = NO;
+        self.searchViewController.searchHistoryStyle = PYHotSearchStyleDefault;
+        self.searchViewController.delegate = self;
+        self.searchViewController.searchViewControllerShowMode = PYSearchViewControllerShowModePush;
+        [self.navigationController pushViewController:self.searchViewController animated:YES];
+        
+    }
+}
+
+#pragma mark - =========requestData========
+- (void)getShipListRequestData {
+    
+    NSDictionary *dic = @{
+                          @"shiptype" : HYNONNil(self.typeId),
+                          @"page":@(self.page),
+                          @"size":@"20"
+                          };
+    [MBProgressHUD showHUDAddedTo:Window_ animated:YES];
+    WEAKSELF;
+    [HYHTTPClient asynchronousPostRequest:@"myship/getShipList" parameters:dic successBlock:^(BOOL success, id data, NSString *msg) {
+        NSLog(@"data====%@",data);
+        [MBProgressHUD hideHUDForView:Window_ animated:YES];
+        [weakSelf.tableView.mj_header endRefreshing];
+        [weakSelf.tableView.mj_footer endRefreshing];
+        
+        if (success && data && [data isKindOfClass:[NSDictionary class]]) {
+            
+            NSArray *arr = [HYShipListModel mj_objectArrayWithKeyValuesArray:data[@"rows"]];
+            
+            if (weakSelf.isFresh) {
+                
+                if (arr && arr.count > 0) {
+                    
+                    [weakSelf.dataArr addObjectsFromArray:arr];
+                }
+                else {
+                    
+                    [Global promptMessage:@"没有更多了" inView:weakSelf.view];
+                    [weakSelf.tableView.mj_footer endRefreshingWithNoMoreData];
+                }
+                
+                [weakSelf.tableView reloadData];
+            }
+            else {
+                
+                [weakSelf.dataArr removeAllObjects];
+                
+                if (arr && arr.count > 0) {
+                    
+                    if (arr.count % 20 == 0) {
+                        
+                        [HYPublicClass refreshWithFooter:weakSelf.tableView refreshingBlock:^{
+                            weakSelf.page++;
+                            weakSelf.isFresh = YES;
+                            [weakSelf getShipListRequestData];
+                        }];
+                    }
+                    
+                    [weakSelf.dataArr addObjectsFromArray:arr];
+                }
+                
+                [weakSelf.tableView reloadData];
+            }
+        }
+        else {
+            
+            [Global promptMessage:msg inView:weakSelf.view];
+        }
+    } failureBlock:^(NSString *description) {
+        [Global promptMessage:description inView:self.view];
+        [MBProgressHUD hideHUDForView:Window_ animated:YES];
+        [weakSelf.tableView.mj_header endRefreshing];
+        [weakSelf.tableView.mj_footer endRefreshing];
+    }];
+}
+
+// 获取我的标签
+- (void)fetchMyTags {
+    
+    NSString *url = @"/label/getUserLabels";
+    
+    NSDictionary *params = @{
+                             @"token" : HYNONNil([HYManager sharedManager].currentUser.token),
+                             };
+    
+    WEAKSELF
+    
+    [HYHttpManager postRequestWithUrl:url params:params parserClass:[HYUserLabelList class] successBlock:^(id response) {
+        [weakSelf.array_type removeAllObjects];
+        weakSelf.array_type = nil;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            
+            HYUserLabelList *list = response;
+            
+            if (list && list.data && list.data.count > 0) {
+                
+                [weakSelf.array_type removeAllObjects];
+                [weakSelf.array_type addObjectsFromArray:list.data];
+            }
+            
+            [weakSelf initWithData];
+        });
+        
+    } failBlock:^(NSError *error) {
+        
+        [weakSelf initWithData];
+    }];
+}
+
+- (void)myChargeShipRequestData:(NSString *)keyword
+{
+    NSDictionary *dic = @{
+                          @"keyword":keyword,
+                          @"page":@"",
+                          @"size":@""
+                          };
+    [MBProgressHUD showHUDAddedTo:Window_ animated:YES];
+    WEAKSELF;
+    [HYHTTPClient asynchronousPostRequest:@"myship/myChargeShip" parameters:dic successBlock:^(BOOL success, id data, NSString *msg) {
+
+        [MBProgressHUD hideHUDForView:Window_ animated:YES];
+        if (success&&data) {
+            NSArray *arr = [HYShipListModel mj_objectArrayWithKeyValuesArray:data[@"rows"]];
+            if (arr&&arr.count>0) {
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.25 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                    
+                    NSMutableArray *searchSuggestionsM = [NSMutableArray array];
+                    for (int i = 0; i < arr.count; i++) {
+                        HYShipListModel *model = arr[i];
+                        
+                        NSString *title = ![NSString dp_isEmptyString:model.chName] ? model.chName : model.shipName;
+                        
+                        NSString *titleName = [NSString stringWithFormat:@"%@ %@",title,model.mmsi];
+                        [searchSuggestionsM addObject:titleName];
+                    }
+                    // Refresh and display the search suggustions
+                    weakSelf.dataList = [NSMutableArray arrayWithArray:arr];
+                    weakSelf.searchViewController.searchSuggestions = searchSuggestionsM;
+                });
+            }else {
+                NSLog(@"加载空视图");
+            }
+            
+        }else {
+            [Global promptMessage:msg inView:weakSelf.view];
+        }
+    } failureBlock:^(NSString *description) {
+        [Global promptMessage:description inView:weakSelf.view];
+        [MBProgressHUD hideHUDForView:Window_ animated:YES];
+    }];
+}
+
+
+
+#pragma mark - UITableViewDelegate
+- (NSInteger)tableView:(UITableView *)table numberOfRowsInSection:(NSInteger)section
+{
+    return self.dataArr.count;
+}
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    return 1;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView estimatedHeightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    return 90;
+}
+- (UITableViewCell*)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    static NSString *cellid = @"listviewid";
+    HYHYShipListTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellid];
+    if (cell == nil) {
+        cell = [[[NSBundle mainBundle] loadNibNamed:@"HYHYShipListTableViewCell" owner:nil options:nil] lastObject];
+    }
+    if(indexPath.row < self.dataArr.count) {
+        cell.shipListModel = self.dataArr[indexPath.row];
+    }
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    HYShipListModel *model = self.dataArr[indexPath.row];
+    
+    HYShipInfo *ship = [[HYShipInfo alloc] init];
+    ship.mmsi = model.mmsi;
+    ship.latitude = model.latitude.doubleValue;
+    ship.longitude = model.longitude.doubleValue;
+    ship.chName = model.chName;
+    ship.shipName = model.shipName;
+    
+    NSString *title = ![NSString dp_isEmptyString:model.chName] ? model.chName : (![NSString dp_isEmptyString:model.shipName] ? model.shipName : model.mmsi);
+    
+    HYShipMapViewController *viewController = [[HYShipMapViewController alloc] init];
+    viewController.ship = ship;
+    viewController.title = title;
+    [self pushNewViewController:viewController];
+}
+
+#pragma mark - PYSearchViewControllerDelegate
+- (void)searchViewController:(PYSearchViewController *)searchViewController searchTextDidChange:(UISearchBar *)seachBar searchText:(NSString *)searchText
+{
+    if (searchText.length) {
+        // Simulate a send request to get a search suggestions
+        [self myChargeShipRequestData:searchText?:@""];
+    }
+}
+
+//点击搜索结果列表里面的数据
+- (void)searchViewController:(PYSearchViewController *)searchViewController
+didSelectSearchHistoryAtIndex:(NSInteger)index
+                  searchText:(NSString *)searchText
+{
+    HYShipListModel *model = [self LocalDataAcquisition:index];
+    
+    if ([model.dest isEqualToString:@"000"]) {
+        
+        [Global promptMessage:@"搜索结果为空" inView:Window_];
+        return;
+    }
+    
+    HYShipInfo *ship = [[HYShipInfo alloc] init];
+    ship.mmsi = model.mmsi;
+    ship.latitude = model.latitude.doubleValue;
+    ship.longitude = model.longitude.doubleValue;
+    ship.chName = model.chName;
+    ship.shipName = model.shipName;
+    
+    NSString *title = ![NSString dp_isEmptyString:model.chName] ? model.chName : (![NSString dp_isEmptyString:model.shipName] ? model.shipName : model.mmsi);
+    HYShipMapViewController *viewController = [[HYShipMapViewController alloc] init];
+    viewController.ship = ship;
+    viewController.title = title;
+    [self.searchViewController.navigationController pushViewController:viewController animated:YES];
+    
+}
+- (void)guiDang:(HYShipListModel *)model {
+    NSString* docPatn = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject];
+    
+    NSLog(@"docPath = %@",docPatn);
+    NSString* path = [docPatn stringByAppendingPathComponent:@"zht.hank"];
+    
+    
+    //自定义对象存到文件中
+    [NSKeyedArchiver archiveRootObject:model toFile:path];
+}
+
+
+//点击历史记录里面的数据
+- (void)searchViewController:(PYSearchViewController *)searchViewController didSelectSearchSuggestionAtIndexPath:(NSIndexPath *)indexPath
+                   searchBar:(UISearchBar *)searchBar
+{
+    //    NSLog(@"index === %ld",(long)indexPath.row);
+    
+    HYShipListModel *model = self.dataList[indexPath.row];
+    
+    [self LocalDataStorage:model];
+    
+    HYShipInfo *ship = [[HYShipInfo alloc] init];
+    ship.mmsi = model.mmsi;
+    ship.latitude = model.latitude.doubleValue;
+    ship.longitude = model.longitude.doubleValue;
+    ship.chName = model.chName;
+    ship.shipName = model.shipName;
+    
+    
+    
+    NSString *title = ![NSString dp_isEmptyString:model.chName] ? model.chName : (![NSString dp_isEmptyString:model.shipName] ? model.shipName : model.mmsi);
+    
+    HYShipMapViewController *viewController = [[HYShipMapViewController alloc] init];
+    viewController.ship = ship;
+    viewController.title = title;
+    [self.searchViewController.navigationController pushViewController:viewController animated:YES];
+    
+}
+
+
+-(void)didAllDeleteSearchViewController:(PYSearchViewController *)searchViewController
+{
+    
+    NSArray *path = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString *demoPath = [path objectAtIndex:0];
+    NSString *homePath = [demoPath stringByAppendingPathComponent:@"searchListHistory.archiver"];
+    
+    NSMutableArray *dataArray = [NSMutableArray arrayWithArray:[NSKeyedUnarchiver unarchiveObjectWithFile:homePath]];
+    [dataArray removeAllObjects];
+    
+    [NSKeyedArchiver archiveRootObject:dataArray toFile:homePath];
+    
+}
+
+-(void)searchViewController:(PYSearchViewController *)searchViewController didDeleteSearchSuggestionAtIndexPath:(NSIndexPath *)indexPath searchText:(NSString *)searchText
+{
+    
+    NSArray *path = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString *demoPath = [path objectAtIndex:0];
+    NSString *homePath = [demoPath stringByAppendingPathComponent:@"searchListHistory.archiver"];
+    
+    NSMutableArray *dataArray = [NSMutableArray arrayWithArray:[NSKeyedUnarchiver unarchiveObjectWithFile:homePath]];
+    [dataArray removeObjectAtIndex:indexPath.row];
+    
+    [NSKeyedArchiver archiveRootObject:dataArray toFile:homePath];
+    
+    
+}
+
+- (void)searchViewController:(PYSearchViewController *)searchViewController
+      didSearchWithSearchBar:(UISearchBar *)searchBar
+                  searchText:(NSString *)searchText
+{
+    
+    HYShipListModel *model = [HYShipListModel new];
+    model.shipName = searchText;
+    model.dest = @"000";//000不跳转无效记录
+    model.mmsi = searchText;
+    [self LocalDataStorage:model];
+    
+    
+}
+
+
+#pragma mark - 本地数据存储及获取
+-(void)LocalDataStorage:(HYShipListModel *)model
+{
+    
+    NSArray *path = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString *demoPath = [path objectAtIndex:0];
+    NSString *homePath = [demoPath stringByAppendingPathComponent:@"searchListHistory.archiver"];
+    
+    NSMutableArray *dataArray = [NSMutableArray arrayWithArray:[NSKeyedUnarchiver unarchiveObjectWithFile:homePath]];
+    
+    //同名判断，如果同名就删除
+    [dataArray enumerateObjectsUsingBlock:^(HYShipListModel *obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        
+        if ([obj.mmsi isEqualToString:model.mmsi]) {
+            
+            [dataArray removeObject:obj];
+            *stop = YES;
+        }
+        
+        
+    }];
+
+    
+    [dataArray insertObject:model atIndex:0];
+    
+    [NSKeyedArchiver archiveRootObject:dataArray toFile:homePath];
+    
+    
+}
+
+-(HYShipListModel *)LocalDataAcquisition:(NSInteger )index
+{
+    NSArray *path = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString *demoPath = [path objectAtIndex:0];
+    NSString *homePath = [demoPath stringByAppendingPathComponent:@"searchListHistory.archiver"];
+    
+    NSMutableArray *dataArray = [NSMutableArray arrayWithArray:[NSKeyedUnarchiver unarchiveObjectWithFile:homePath]];
+    HYShipListModel *model1 = [dataArray objectAtIndex:index];
+
+    if (index > 0) {
+        [dataArray removeObjectAtIndex:index];
+        [dataArray insertObject:model1 atIndex:0];
+    }
+    
+    [NSKeyedArchiver archiveRootObject:dataArray toFile:homePath];
+    HYShipListModel *model = [dataArray objectAtIndex:0];
+    return model;
+    
+}
+
+
+#pragma mark - =========懒加载========
+- (HYSelectView *)selectView {
+    
+    if (!_selectView) {
+        
+        _selectView = [[[NSBundle mainBundle] loadNibNamed:@"HYSelectView" owner:nil options:nil] lastObject];
+        _selectView.hidden = YES;
+        
+        MJWeakSelf;
+        _selectView.selectBlock = ^(NSString *str, NSInteger index) {
+            
+            HYUserLabel *label = [weakSelf.array_type objectAtIndex:index];
+            
+            weakSelf.selectView.hidden = YES;
+            weakSelf.leftLab.text = [NSString stringWithFormat:@" %@",str];
+            weakSelf.typeId = label.ID;
+            [weakSelf.tableView.mj_header beginRefreshing];
+        };
+        
+        [self.view addSubview:_selectView];
+        
+        [_selectView mas_makeConstraints:^(MASConstraintMaker *make) {
+            
+            make.edges.equalTo(weakSelf.view);
+        }];
+    }
+    
+    return _selectView;
+}
+
+
+- (NSMutableArray *)array_type {
+    
+    if (!_array_type) {
+        
+        _array_type = [[NSMutableArray alloc] init];
+    }
+    
+    if ([_array_type count] == 0) {
+        
+        {
+            HYUserLabel *label = [[HYUserLabel alloc] init];
+            label.labelId = @"0";
+            label.ID = @"0";
+            label.name = @"全部船舶";
+            [_array_type addObject:label];
+        }
+        {
+            HYUserLabel *label = [[HYUserLabel alloc] init];
+            label.labelId = @"-1";
+            label.ID = @"-1";
+            label.name = @"大V船舶";
+            [_array_type addObject:label];
+        }
+        {
+            HYUserLabel *label = [[HYUserLabel alloc] init];
+            label.labelId = @"-2";
+            label.ID = @"-2";
+            label.name = @"潜在客户";
+            [_array_type addObject:label];
+        }
+        {
+            HYUserLabel *label = [[HYUserLabel alloc] init];
+            label.labelId = @"-3";
+            label.ID = @"-3";
+            label.name = @"公海船舶";
+            [_array_type addObject:label];
+        }
+    }
+    
+    return _array_type;
+}
+
+
+@end
+

@@ -1,0 +1,163 @@
+//
+//  HYSearchShipViewController.m
+//  CJHGoggle
+//
+//  Created by 吴棒棒 on 2018/8/15.
+//  Copyright © 2018年 CJH. All rights reserved.
+//
+/**
+ *　　　　　　　 ┏┓       ┏┓+ +
+ *　　　　　　　┏┛┻━━━━━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　 ┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 █████━█████  ┃+
+ *　　　　　　　┃　　　　　　 ┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　 ┃ + +
+ *　　　　　　　┗━━┓　　　 ┏━┛
+ *               ┃　　  ┃
+ *　　　　　　　　　┃　　  ┃ + + + +
+ *　　　　　　　　　┃　　　┃　Code is far away from     bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　         神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　 ┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━━━┳┓┏┛ + + + +
+ *　　　　　　　　　 ┃┫┫　 ┃┫┫
+ *　　　　　　　　　 ┗┻┛　 ┗┻┛+ + + +
+ */
+
+#import "HYSearchShipViewController.h"
+#import "HYHYShipListTableViewCell.h"
+
+@interface HYSearchShipViewController ()<UITableViewDelegate,UITableViewDataSource,UISearchControllerDelegate,UISearchResultsUpdating>
+
+//tableView
+@property (weak, nonatomic) IBOutlet UITableView *tableView;
+//searchController
+@property (strong, nonatomic)  UISearchController *searchController;
+
+//数据源
+@property (strong,nonatomic) NSMutableArray  *dataList;
+
+@property (strong,nonatomic) NSMutableArray  *searchList;
+@end
+
+@implementation HYSearchShipViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view from its nib.
+    self.dataList=[NSMutableArray arrayWithCapacity:0];
+    self.searchList=[NSMutableArray arrayWithCapacity:0];
+    
+    //创建UISearchController
+    _searchController = [[UISearchController alloc] initWithSearchResultsController:nil];
+    //设置代理
+    _searchController.delegate = self;
+    _searchController.searchResultsUpdater= self;
+
+    //隐藏导航栏
+    _searchController.hidesNavigationBarDuringPresentation = YES;
+    // 添加 searchbar 到 headerview
+    self.tableView.tableHeaderView = _searchController.searchBar;
+    
+
+    //设置背景图是为了去掉上下黑线
+//    _searchController.searchBar.backgroundImage =[UIImage imageWithColor:kWhiteColor size:CGSizeMake(kScreenWidth, 44)];
+    // 设置SearchBar的颜色主题为白色
+//    _searchController.searchBar.barTintColor = [UIColor whiteColor];
+    [_searchController.searchBar becomeFirstResponder];
+    
+//    UITextField *searchField = [_searchController.searchBar valueForKey:@"searchField"];
+//    if (searchField) {
+//        [searchField setBackgroundColor:hexColor(@"f8f8f8")];
+//        searchField.layer.cornerRadius = 14.0f;
+//        searchField.layer.masksToBounds = YES;
+//        [searchField becomeFirstResponder];
+//    }
+}
+//设置区域的行数
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    if (self.searchController.active) {
+        return [self.searchList count];
+    }else{
+        return [self.dataList count];
+    }
+}
+
+
+//返回单元格内容
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    static NSString *cellid = @"listviewid";
+    HYHYShipListTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellid];
+    if (cell == nil) {
+        cell = [[[NSBundle mainBundle] loadNibNamed:@"HYHYShipListTableViewCell" owner:nil options:nil] lastObject];
+    }
+    cell.dataArr = @[@"将军百",@"十年",@"奶油过"];
+    return cell;
+    
+    
+//    if (self.searchController.active) {
+//        [cell.textLabel setText:self.searchList[indexPath.row]];
+//    }
+//    else{
+//        [cell.textLabel setText:self.dataList[indexPath.row]];
+//    }
+//    return cell;
+}
+
+
+#pragma mark - UISearchControllerDelegate代理
+
+//测试UISearchController的执行过程
+
+- (void)willPresentSearchController:(UISearchController *)searchController
+{
+    NSLog(@"willPresentSearchController");
+}
+
+- (void)didPresentSearchController:(UISearchController *)searchController
+{
+    NSLog(@"didPresentSearchController");
+}
+
+- (void)willDismissSearchController:(UISearchController *)searchController
+{
+    NSLog(@"willDismissSearchController");
+}
+
+- (void)didDismissSearchController:(UISearchController *)searchController
+{
+    NSLog(@"didDismissSearchController");
+}
+
+- (void)presentSearchController:(UISearchController *)searchController
+{
+    NSLog(@"presentSearchController");
+}
+
+
+-(void)updateSearchResultsForSearchController:(UISearchController *)searchController {
+    
+    NSLog(@"updateSearchResultsForSearchController");
+    NSString *searchString = [self.searchController.searchBar text];
+    NSPredicate *preicate = [NSPredicate predicateWithFormat:@"SELF CONTAINS[c] %@", searchString];
+    if (self.searchList!= nil) {
+        [self.searchList removeAllObjects];
+    }
+    //过滤数据
+    self.searchList= [NSMutableArray arrayWithArray:[_dataList filteredArrayUsingPredicate:preicate]];
+    //刷新表格
+    [self.tableView reloadData];
+}
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+
+
+@end

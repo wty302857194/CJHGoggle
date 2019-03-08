@@ -1,0 +1,99 @@
+//
+//  HYUnassignedTableViewCell.m
+//  CJHGoggle
+//
+//  Created by 吴棒棒 on 2018/8/8.
+//  Copyright © 2018年 CJH. All rights reserved.
+//
+/**
+ *　　　　　　　 ┏┓       ┏┓+ +
+ *　　　　　　　┏┛┻━━━━━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　 ┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 █████━█████  ┃+
+ *　　　　　　　┃　　　　　　 ┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　 ┃ + +
+ *　　　　　　　┗━━┓　　　 ┏━┛
+ *               ┃　　  ┃
+ *　　　　　　　　　┃　　  ┃ + + + +
+ *　　　　　　　　　┃　　　┃　Code is far away from     bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　         神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　 ┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━━━┳┓┏┛ + + + +
+ *　　　　　　　　　 ┃┫┫　 ┃┫┫
+ *　　　　　　　　　 ┗┻┛　 ┗┻┛+ + + +
+ */
+
+#import "HYUnassignedTableViewCell.h"
+#import "HYUnassignedModel.h"
+
+@interface HYUnassignedTableViewCell ()
+
+@property (weak, nonatomic) IBOutlet UIImageView *imgView;
+@property (weak, nonatomic) IBOutlet UILabel *shipNameLab;
+@property (weak, nonatomic) IBOutlet UILabel *contentLab;
+
+@property (nonatomic, strong) HYUnassignedModel *model;
+
+@end
+
+@implementation HYUnassignedTableViewCell
+
+- (void)awakeFromNib
+{
+    [super awakeFromNib];
+    // Initialization code
+}
+
+- (void)prepareForReuse {
+    
+    [super prepareForReuse];
+    
+    self.model = nil;
+    self.imgView.image = nil;
+    self.shipNameLab.text = nil;
+    self.contentLab.text = nil;
+}
+
+- (void)bindWithModel:(id)model {
+    
+    if (model && [model isKindOfClass:[HYUnassignedModel class]]) {
+        
+        _model = model;
+        
+        UIImage *image = [UIImage imageNamed:@"ship_default_right"];
+        
+        NSInteger cjhState = _model.cjhState.integerValue;
+        
+        if (cjhState == 1) {
+            
+            image = [UIImage imageNamed:@"cjh_p_right"];
+        }
+        else if (cjhState == 2) {
+            
+            image = [UIImage imageNamed:@"cjh_v_right"];
+        }
+        
+        self.imgView.image = image;
+        
+        NSString *title = ![NSString dp_isEmptyString:_model.shipName] ? _model.shipName : _model.mmsi;
+        
+        self.shipNameLab.text = [NSString stringWithFormat:@"【%@】", title];
+        self.contentLab.text = [NSDate dateWithTimeIntervalSince1970:_model.moorStartTime.doubleValue / 1000].string;
+    }
+}
+
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated
+{
+    [super setSelected:selected animated:animated];
+
+    // Configure the view for the selected state
+}
+
+@end

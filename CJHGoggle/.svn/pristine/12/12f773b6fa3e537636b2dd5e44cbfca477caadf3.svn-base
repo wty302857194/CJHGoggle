@@ -1,0 +1,534 @@
+//
+//  HYMoorViewController.m
+//  CJHCompetitors
+//
+//  Created by 耿建峰 on 2017/9/25.
+//  Copyright © 2017年 gengjf. All rights reserved.
+//
+
+#import "HYShipDetailViewController.h"
+
+#import "HYShipsList.h"
+
+#import "HYShipInfo.h"
+
+#import "HYShipInfoHeaderView.h"
+
+#import "HYShipTrailViewController.h"
+
+#import "HYSailorTableHeaderView.h"
+
+#import "HYNoOilSaledTableHeaderView.h"
+
+#import "HYOilSaledTableHeaderView.h"
+
+#import "HYSailorTableViewCell.h"
+
+#import "HYOilSaledTableViewCell.h"
+
+#import "HYAddTagView.h"
+
+#import "HYInputTagView.h"
+
+#import "HYShipDetailInfo.h"
+
+#import "HYUserLabel.h"
+
+@interface HYShipDetailViewController () <HYShipInfoHeaderViewDelegate>
+
+@property (nonatomic, strong) HYShipInfoHeaderView *shipInfoHeaderView;
+@property (nonatomic, strong) HYSailorTableHeaderView *sailorTableHeaderView;
+@property (nonatomic, strong) HYOilSaledTableHeaderView *oilSaledTableHeaderView;
+@property (nonatomic, strong) HYNoOilSaledTableHeaderView *noOilSaledTableHeaderView;
+
+@property (nonatomic, strong) HYShipDetailInfo *detailInfo;
+
+@end
+
+@implementation HYShipDetailViewController
+
+- (void)viewDidLoad {
+ 
+    [super viewDidLoad];
+    
+    self.view.backgroundColor = [UIColor whiteColor];
+    
+    self.extendedLayoutIncludesOpaqueBars = NO;
+    
+    if ([self respondsToSelector:@selector(setEdgesForExtendedLayout:)]) {
+        self.edgesForExtendedLayout = UIRectEdgeNone;
+    }
+    
+    [self makeSubViews];
+    
+    // 获取船舶详情
+    [self fetchShipDetailInfo];
+}
+
+- (void)makeSubViews {
+    
+    NSString *title = ![NSString dp_isEmptyString:self.ship.chName] ? self.ship.chName : (![NSString dp_isEmptyString:self.ship.shipName] ? self.ship.shipName : self.ship.mmsi);
+    
+    self.title = title;
+    
+    self.tableView.hidden = YES;
+    
+    [self.view addSubview:self.shipInfoHeaderView];
+    
+    WEAKSELF
+    [self.tableView mas_remakeConstraints:^(MASConstraintMaker *make) {
+        
+        make.left.right.bottom.equalTo(weakSelf.view);
+        make.top.equalTo(weakSelf.shipInfoHeaderView.mas_bottom);
+    }];
+}
+
+// 获取船员、消费数据
+- (void)fetchShipDetailList {
+    
+    NSString *url = @"/myship/getShipDetailList";
+    
+    NSDictionary *params = @{
+                             @"token" : HYNONNil([HYManager sharedManager].currentUser.token),
+                             @"mmsi" : HYNONNil(self.ship.mmsi),
+                             };
+    
+    WEAKSELF
+    [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    [HYHttpManager postRequestWithUrl:url params:params parserClass:[HYShipDetailInfo class] successBlock:^(id response) {
+        
+        [MBProgressHUD hideHUDForView:weakSelf.view animated:YES];
+        
+        HYShipDetailInfo *detail = response;
+        
+        if (detail) {
+            
+            weakSelf.detailInfo.memberList = detail.memberList;
+            
+            weakSelf.detailInfo.oilRecordList = detail.oilRecordList;
+            
+            weakSelf.detailInfo.nonOilRecords = detail.nonOilRecords;
+            
+            [weakSelf loadDataSource];
+        }
+        
+    } failBlock:^(NSError *error) {
+        [MBProgressHUD hideHUDForView:weakSelf.view animated:YES];
+    }];
+}
+
+- (void)fetchShipDetailInfo {
+    
+    NSString *url = @"/myship/getShipInfo";
+    
+    NSDictionary *params = @{
+                             @"token" : HYNONNil([HYManager sharedManager].currentUser.token),
+                             @"mmsi" : HYNONNil(self.ship.mmsi),
+                             };
+    
+    WEAKSELF
+    
+    [HYHttpManager postRequestWithUrl:url params:params parserClass:[HYShipDetailInfo class] successBlock:^(id response) {
+        
+        HYShipDetailInfo *detail = response;
+        
+        if (detail) {
+            
+            weakSelf.detailInfo = detail;
+            
+            weakSelf.detailInfo.shipBaseInfo = weakSelf.ship;
+            
+            weakSelf.shipInfoHeaderView.hidden = NO;
+            
+            [weakSelf.shipInfoHeaderView bindWithModel:weakSelf.detailInfo];
+            
+            weakSelf.tableView.hidden = NO;
+            
+            // 获取船员和消费信息
+            [weakSelf fetchShipDetailList];
+        }
+        else {
+            
+            [MBProgressHUD hideHUDForView:weakSelf.view animated:YES];
+        }
+        
+    } failBlock:^(NSError *error) {
+        
+        [MBProgressHUD hideHUDForView:weakSelf.view animated:YES];
+    }];
+}
+
+- (void)loadDataSource {
+    
+    [self.dataSource removeAllObjects];
+    [self.tableView reloadData];
+    
+    if ([self.shipInfoHeaderView currentSelectedType] == HYSHIPINFO_HEAD_USER) {
+        
+        [self.dataSource addObjectsFromArray:self.detailInfo.memberList];
+    }
+    else if ([self.shipInfoHeaderView currentSelectedType] == HYSHIPINFO_HEAD_PAY_RECORD) {
+        
+        [self.dataSource addObject:self.detailInfo.oilRecordList];
+        [self.dataSource addObject:self.detailInfo.nonOilRecords];
+    }
+    
+    [self.tableView reloadData];
+}
+
+#pragma mark - UITableViewDelegate & UITableViewDataSource
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+    
+    NSInteger count = 1;
+    
+    if ([self.shipInfoHeaderView currentSelectedType] == HYSHIPINFO_HEAD_PAY_RECORD) {
+        
+        count = [self.dataSource count];
+    }
+    
+    return count;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    
+    NSInteger count = [self.dataSource count];
+    
+    if ([self.shipInfoHeaderView currentSelectedType] == HYSHIPINFO_HEAD_PAY_RECORD) {
+        
+        NSArray *array = [self.dataSource objectAtIndex:section];
+        count = [array count];
+    }
+    
+    return count;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
+    
+    return 45;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
+    
+    CGFloat height = 45;
+    
+    if ([self.shipInfoHeaderView currentSelectedType] == HYSHIPINFO_HEAD_USER) {
+        
+        height = 45;
+    }
+    else if ([self.shipInfoHeaderView currentSelectedType] == HYSHIPINFO_HEAD_PAY_RECORD) {
+        
+        if (section == 0) {
+            // 油品
+            height = 90;
+        }
+        else {
+            
+            height = 90;
+        }
+    }
+    
+    return height;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
+    
+    NSString *headerIdentifier = @"HYSailorTableHeaderView";
+    
+    if ([self.shipInfoHeaderView currentSelectedType] == HYSHIPINFO_HEAD_USER) {
+        
+        headerIdentifier = @"HYSailorTableHeaderView";
+    }
+    else if ([self.shipInfoHeaderView currentSelectedType] == HYSHIPINFO_HEAD_PAY_RECORD) {
+        
+        if (section == 0) {
+            // 油品
+            headerIdentifier = @"HYOilSaledTableHeaderView";
+        }
+        else {
+            
+            headerIdentifier = @"HYNoOilSaledTableHeaderView";
+        }
+    }
+    
+    UITableViewHeaderFooterView *view = [tableView dequeueReusableHeaderFooterViewWithIdentifier:headerIdentifier];
+    
+    if(!view) {
+        
+        view = [[UITableViewHeaderFooterView alloc] initWithReuseIdentifier:headerIdentifier];
+        
+        view.contentView.backgroundColor = [UIColor clearColor];
+        
+        // 只做设置上面的设置不会显示透明，需额外添加一个view
+        CGFloat height = [self tableView:tableView heightForHeaderInSection:section];
+        
+        view.backgroundView = [[UIImageView alloc] initWithImage:[UIImage dp_imageWithColor:[UIColor clearColor] size:CGSizeMake(tableView.bounds.size.width, height) alpha:1]];
+        
+        if ([self.shipInfoHeaderView currentSelectedType] == HYSHIPINFO_HEAD_USER) {
+            
+            [view addSubview:self.sailorTableHeaderView];
+            
+            WEAKOBJECT(view)
+            [self.sailorTableHeaderView mas_remakeConstraints:^(MASConstraintMaker *make) {
+                
+                make.edges.equalTo(weakObject);
+            }];
+        }
+        else if ([self.shipInfoHeaderView currentSelectedType] == HYSHIPINFO_HEAD_PAY_RECORD) {
+            
+            if (section == 0) {
+                // 油品
+                [view addSubview:self.oilSaledTableHeaderView];
+                
+                WEAKOBJECT(view)
+                [self.oilSaledTableHeaderView mas_remakeConstraints:^(MASConstraintMaker *make) {
+                    
+                    make.edges.equalTo(weakObject);
+                }];
+            }
+            else {
+                
+                [view addSubview:self.noOilSaledTableHeaderView];
+                
+                WEAKOBJECT(view)
+                [self.noOilSaledTableHeaderView mas_remakeConstraints:^(MASConstraintMaker *make) {
+                    
+                    make.edges.equalTo(weakObject);
+                }];
+            }
+        }
+    }
+    
+    [view prepareForReuse];
+    
+    return view;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    
+    UITableViewCell *cell = nil;
+    
+    if ([self.shipInfoHeaderView currentSelectedType] == HYSHIPINFO_HEAD_USER) {
+        
+        cell = [tableView dequeueReusableCellWithIdentifier:@"HYSailorTableViewCell"];
+        
+        if(!cell) {
+            
+            cell = [[HYSailorTableViewCell alloc] init];
+            
+            cell.selectionStyle = UITableViewCellSelectionStyleNone;
+        }
+        
+        [self setUpCell:(HYSailorTableViewCell *)cell indexPath:indexPath];
+    }
+    else if ([self.shipInfoHeaderView currentSelectedType] == HYSHIPINFO_HEAD_PAY_RECORD) {
+        
+        cell = [tableView dequeueReusableCellWithIdentifier:@"HYOilSaledTableViewCell"];
+        
+        if(!cell) {
+            
+            cell = [[HYOilSaledTableViewCell alloc] init];
+            
+            cell.selectionStyle = UITableViewCellSelectionStyleNone;
+        }
+        
+        [self setUpSaledCell:(HYOilSaledTableViewCell *)cell indexPath:indexPath];
+    }
+    
+    return cell;
+}
+
+// 船员
+- (void)setUpCell:(HYSailorTableViewCell *)cell indexPath:(NSIndexPath *)indexPath {
+
+    HYShipMemberRecord *model = [self.dataSource objectAtIndex:indexPath.row];
+
+    [cell bindWithModel:model];
+    
+    if (indexPath.row == ([self.dataSource count] - 1)) {
+        
+        cell.isLast = YES;
+    }
+    else {
+        
+        cell.isLast = NO;
+    }
+    
+}
+
+- (void)setUpSaledCell:(HYOilSaledTableViewCell *)cell indexPath:(NSIndexPath *)indexPath {
+    
+    NSArray *array = [self.dataSource objectAtIndex:indexPath.section];
+    
+    HYShipMemberRecord *model = [array objectAtIndex:indexPath.row];
+    
+    [cell bindWithModel:model];
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+}
+
+#pragma mark - HYShipInfoHeaderViewDelegate method
+
+// 查看轨迹
+- (void)shipInfoHeaderView:(HYShipInfoHeaderView *)view historyTrail:(HYShipInfo *)model {
+    
+    HYShipTrailViewController *viewController = [[HYShipTrailViewController alloc] init];
+    viewController.ship = self.ship;
+    [self pushNewViewController:viewController];
+}
+// 添加星标
+- (void)shipInfoHeaderViewAddStar:(HYShipInfoHeaderView *)view {
+    
+    if (self.detailInfo.isstar) {
+        // 删除标签
+        NSString *url = @"/label/deleteStar";
+        
+        NSDictionary *params = @{
+                                 @"token" : HYNONNil([HYManager sharedManager].currentUser.token),
+                                 @"shipid" : HYNONNil(self.detailInfo.shipid),
+                                 };
+        
+        WEAKSELF
+        [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+        [HYHttpManager postRequestWithUrl:url params:params parserClass:[HYShipDetailInfo class] successBlock:^(id response) {
+            
+            weakSelf.detailInfo.isstar = NO;
+            [weakSelf.shipInfoHeaderView bindWithModel:weakSelf.detailInfo];
+            [MBProgressHUD hideHUDForView:self.view animated:YES];
+            
+        } failBlock:^(NSError *error) {
+            
+            [Global promptMessage:error.domain inView:weakSelf.view];
+            [MBProgressHUD hideHUDForView:self.view animated:YES];
+        }];
+    }
+    else {
+        // 添加标签
+        NSString *url = @"/label/addStar";
+
+        NSDictionary *params = @{
+                                 @"token" : HYNONNil([HYManager sharedManager].currentUser.token),
+                                 @"shipid" : HYNONNil(self.detailInfo.shipid),
+                                 };
+
+        WEAKSELF
+
+        [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+        [HYHttpManager postRequestWithUrl:url params:params parserClass:[HYShipDetailInfo class] successBlock:^(id response) {
+
+            weakSelf.detailInfo.isstar = YES;
+            [weakSelf.shipInfoHeaderView bindWithModel:weakSelf.detailInfo];
+            [MBProgressHUD hideHUDForView:self.view animated:YES];
+
+        } failBlock:^(NSError *error) {
+            
+            [Global promptMessage:error.domain inView:weakSelf.view];
+            [MBProgressHUD hideHUDForView:self.view animated:YES];
+        }];
+    }
+    
+}
+// 添加标签
+- (void)shipInfoHeaderViewAddTag:(HYShipInfoHeaderView *)view {
+    
+    HYAddTagView *addTagView = [[[NSBundle mainBundle] loadNibNamed:@"HYAddTagView" owner:nil options:nil] lastObject];
+    [addTagView bindWithModel:self.detailInfo.labelList];
+    addTagView.chooseTagBlock = ^(NSString *str) {
+        
+        if ([NSString dp_isEmptyString:str]) return;
+        
+        NSString *url = @"/label/addLabelToShip";
+        
+        NSDictionary *params = @{
+                                 @"token" : HYNONNil([HYManager sharedManager].currentUser.token),
+                                 @"shipid" : HYNONNil(self.detailInfo.shipid),
+                                 @"labelids" : HYNONNil(str),
+                                 };
+        WEAKSELF
+        WEAKOBJECT(addTagView)
+        [HYHttpManager postRequestWithUrl:url params:params parserClass:[HYBaseModel class] successBlock:^(id response) {
+            
+            dispatch_async(dispatch_get_main_queue(), ^{
+                
+                weakObject.hidden = YES;
+                [weakSelf fetchShipDetailInfo];
+            });
+            
+        } failBlock:^(NSError *error) {
+            
+            [HYFoundationCommon promotDialogWithTitle:@"添加标签" message:error.localizedDescription];
+        }];
+
+    };
+    
+    [self.view addSubview:addTagView];
+    
+    WEAKSELF
+    [addTagView mas_makeConstraints:^(MASConstraintMaker *make) {
+        
+        make.edges.equalTo(weakSelf.view);
+    }];
+}
+// 选择查看用户信息
+- (void)shipInfoHeaderViewSelectUserInfo:(HYShipInfoHeaderView *)view {
+    
+    [self loadDataSource];
+}
+// 选择查看消费记录
+- (void)shipInfoHeaderViewSelectPayRecord:(HYShipInfoHeaderView *)view {
+    
+    [self loadDataSource];
+}
+
+#pragma mark - Properties
+
+- (HYShipInfoHeaderView *)shipInfoHeaderView {
+    
+    if (!_shipInfoHeaderView) {
+        
+        _shipInfoHeaderView = [[HYShipInfoHeaderView alloc] init];
+        
+        _shipInfoHeaderView.frame = CGRectMake(0, 0, ScreenWidth, 315);
+        
+        _shipInfoHeaderView.delegate = self;
+    }
+    
+    return _shipInfoHeaderView;
+}
+
+- (HYSailorTableHeaderView *)sailorTableHeaderView {
+    
+    if (!_sailorTableHeaderView) {
+        
+        _sailorTableHeaderView = [[HYSailorTableHeaderView alloc] init];
+    }
+    
+    return _sailorTableHeaderView;
+}
+
+- (HYOilSaledTableHeaderView *)oilSaledTableHeaderView {
+    
+    if (!_oilSaledTableHeaderView) {
+        
+        _oilSaledTableHeaderView = [[HYOilSaledTableHeaderView alloc] init];
+    }
+    
+    return _oilSaledTableHeaderView;
+}
+
+- (HYNoOilSaledTableHeaderView *)noOilSaledTableHeaderView {
+    
+    if (!_noOilSaledTableHeaderView) {
+        
+        _noOilSaledTableHeaderView = [[HYNoOilSaledTableHeaderView alloc] init];
+    }
+    
+    return _noOilSaledTableHeaderView;
+}
+
+#pragma mark -
+
+@end

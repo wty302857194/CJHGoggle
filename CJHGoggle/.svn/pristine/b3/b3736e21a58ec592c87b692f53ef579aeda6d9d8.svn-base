@@ -1,0 +1,1139 @@
+//
+//  HYHomeViewController.m
+//  CJHCompetitors
+//
+//  Created by 耿建峰 on 2017/9/25.
+//  Copyright © 2017年 gengjf. All rights reserved.
+//
+
+#import "HYHomeCenterViewController.h"
+#import "HYMessageCenterViewController.h"
+
+#import <BaiduMapAPI_Map/BMKMapComponent.h>
+
+#import <BaiduMapAPI_Location/BMKLocationService.h>
+
+#import <BaiduMapAPI_Utils/BMKUtilsComponent.h>
+
+#import "HYShipsList.h"
+
+#import "HYShipInfo.h"
+
+#import "HYMapPointAnnotion.h"
+
+#import "HYAnnotationView.h"
+
+#import "HYCustomOverlay.h"
+
+#import "HYCustomOverlayView.h"
+
+#import "HYMonitorAlertView.h"
+
+#import "HYStationItemView.h"
+
+#import "HYStation.h"
+
+#import "HYShipDetailViewController.h"
+
+#import "HYSelectView.h"
+
+#import "HYHomeNotificationView.h"
+#import "HYNotification.h"
+#import "HYNotificationList.h"
+#import "HYStationList.h"
+
+#import "HYStation.h"
+
+#import "HYHomeTitleView.h"
+
+#import "HYShipTrailViewController.h"
+
+// 地图AIS数据刷新间隔
+#define AIS_REQUEST_INTERVAL 2*60.0
+
+@interface HYHomeCenterViewController () <BMKMapViewDelegate,
+BMKLocationServiceDelegate,
+HYMonitorAlertViewDelegate,
+HYStationItemViewDelegate,
+HYHomeNotificationViewDelegate,
+UISearchBarDelegate
+>
+
+@property (nonatomic, assign) BOOL canRequest;
+
+@property (nonatomic, assign) BOOL editing;
+
+@property (nonatomic, assign) BOOL searching;
+
+@property (nonatomic, strong) HYHomeTitleView *headerView;
+
+@property (nonatomic, strong) UISearchBar *searchBar;
+
+// 搜索关键字
+@property (nonatomic, copy) NSString *keyText;
+
+@property (nonatomic, strong) HYStationItemView *stationItemView;
+
+@property (nonatomic, strong) NSArray<HYStation *> *array_stations;
+
+@property (nonatomic, strong) BMKPointAnnotation *pointAnnotation1;
+@property (nonatomic, strong) BMKPointAnnotation *pointAnnotation2;
+@property (nonatomic, strong) BMKPointAnnotation *pointAnnotation3;
+@property (nonatomic, strong) BMKPointAnnotation *pointAnnotation4;
+
+@property (nonatomic, strong) IBOutlet BMKMapView *mapView;
+
+// 定位服务对象(专门用于定位)
+@property (nonatomic, strong) BMKLocationService *locationService;
+
+@property (nonatomic, strong) IBOutlet UIButton *button_normal;
+@property (nonatomic, strong) IBOutlet UIButton *button_satellite;
+
+@property (nonatomic, strong) NSTimer *timer_auto;
+
+@property (nonatomic, strong) CLLocation *locMin;
+
+@property (nonatomic, strong) CLLocation *locMax;
+
+@property (nonatomic, strong) HYSelectView *selectView;
+
+@property (nonatomic, strong) HYHomeNotificationView *homeNotificationView;
+@property (nonatomic, strong) NSArray<HYNotification *> *array_notifications;
+
+@end
+
+@implementation HYHomeCenterViewController
+
+- (void)viewDidLoad {
+ 
+    [super viewDidLoad];
+    
+    self.title = @"首页";
+    
+    self.mapView.delegate = self;
+    
+    self.mapView.rotateEnabled = NO;
+    
+    [self makeSubViews];
+    
+    // 获取快捷跳转站点信息
+    [self fetchQuickSwitch];
+    
+    // 兴隆洲服务区
+    BMKCoordinateRegion region;
+    region.center = CLLocationCoordinate2DMake(32.19039724509582, 119.03086213172625);
+    region.span.latitudeDelta  = 0.05;
+    region.span.longitudeDelta = 0.05;
+    self.mapView.region = region;
+    
+    // 卫星地图
+    self.mapView.mapType = BMKMapTypeSatellite;
+    
+    self.mapView.showsUserLocation = YES;//显示定位图层
+    
+    if ([[HYManager sharedManager].currentUser haveAddMonitorRight]) {
+        // 用户是否拥有新增区域权限
+        
+        // 长按地图新增坐标点
+        UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(threeClicked:)];
+        tap.numberOfTouchesRequired = 1;
+        tap.numberOfTapsRequired = 3;
+        [self.mapView addGestureRecognizer:tap];
+    }
+}
+
+- (void)makeSubViews {
+    
+    self.extendedLayoutIncludesOpaqueBars = NO;
+
+    if ([self respondsToSelector:@selector(setEdgesForExtendedLayout:)]) {
+        self.edgesForExtendedLayout = UIRectEdgeNone;
+    }
+    
+    self.navigationItem.titleView = self.headerView;
+    
+    self.navigationItem.leftBarButtonItems = [HYFoundationCommon barButtonItemWithTarget:self select:@selector(stationClicked:) withView:self.stationItemView];
+    
+    self.navigationItem.rightBarButtonItems = [HYFoundationCommon barButtonItemWithTarget:self select:@selector(gotoMessage:) withImage:[UIImage imageNamed:@"home_ico_message"] withRect:DPBarItemRect];
+    
+    // 创建定位服务对象
+    self.locationService = [[BMKLocationService alloc] init];
+    // 设置定位服务对象的代理
+    self.locationService.delegate = self;
+    // 设置再次定位的最小距离
+    self.locationService.distanceFilter = 10;
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    
+    [super viewWillAppear:animated];
+    
+    if (!self.array_stations || self.array_stations.count == 0) {
+        
+        [self fetchQuickSwitch];
+    }
+    
+    // 获取新消息
+    [self fetchNewNotification];
+    
+    [self.mapView viewWillAppear];
+    self.mapView.delegate = self;
+    
+    self.locationService.delegate = self;
+    
+    [self mapView:self.mapView regionDidChangeAnimated:YES];
+}
+
+- (void)viewWillDisappear:(BOOL)animated {
+    
+    [super viewWillDisappear:animated];
+    
+    [self.mapView viewWillDisappear];
+    
+    self.mapView.delegate = nil;
+    
+    self.locationService.delegate = nil;
+    
+    // 不允许请求
+    self.canRequest = NO;
+    
+    if(self.timer_auto && self.timer_auto.isValid) {
+        
+        [self.timer_auto invalidate];
+        self.timer_auto = nil;
+    }
+    
+    if(self.editing) {
+        
+        [self cancel:nil];
+    }
+}
+
+#pragma mark - 获取快捷跳转区域数据
+
+- (void)fetchQuickSwitch {
+    
+    NSString *url = @"/ais/quickSwitch";
+    
+    NSDictionary *params = @{
+                             @"token" : HYNONNil([HYManager sharedManager].currentUser.token),
+                             };
+    
+    WEAKSELF
+    
+    [HYHttpManager postRequestWithUrl:url params:params parserClass:[HYStationList class] successBlock:^(id response) {
+        
+        HYStationList *list = response;
+        
+        if (list && [list.data count] > 0) {
+            
+            NSMutableArray *array = [NSMutableArray array];
+            
+            for (HYStation *station in list.data) {
+                
+                [array addObject:HYNONNil(station.name)];
+            }
+            
+            weakSelf.array_stations = list.data;
+            
+            dispatch_async(dispatch_get_main_queue(), ^{
+                
+                [weakSelf.stationItemView bindWithModel:weakSelf.array_stations[0]];
+                
+                [weakSelf.selectView bindWithModel:array];
+                
+                [weakSelf.selectView selectAtIndex:0];
+            });
+        }
+        
+    } failBlock:^(NSError *error) {
+        
+    }];
+}
+
+#pragma mark - 获取首页消息
+- (void)fetchNewNotification {
+    
+    NSString *url = @"/message/indexMessage";
+    
+    NSDictionary *params = @{
+                             @"token" : HYNONNil([HYManager sharedManager].currentUser.token),
+                             };
+    
+    WEAKSELF
+    
+    [HYHttpManager postRequestWithUrl:url params:params parserClass:[HYNotificationList class] successBlock:^(id response) {
+        
+        HYNotificationList *list = response;
+        
+        if (list && [list.data count] > 0) {
+            
+            weakSelf.array_notifications = [NSArray arrayWithArray:list.data];
+            
+            weakSelf.homeNotificationView.hidden = NO;
+            
+            [weakSelf.homeNotificationView bindWithModel:self.array_notifications];
+        }
+        
+    } failBlock:^(NSError *error) {
+        
+    }];
+}
+
+#pragma mark - Action method
+
+- (IBAction)showCurrentLocation:(id)sender {
+    
+    [self.locationService startUserLocationService];
+    // 在地图上显示用户位置
+    self.mapView.showsUserLocation = YES;
+}
+
+- (IBAction)showNormal:(id)sender {
+    
+    // 标准地图
+    self.mapView.mapType = BMKMapTypeStandard;
+    
+    self.button_normal.selected = YES;
+    self.button_satellite.selected = NO;
+}
+
+- (IBAction)showSatellite:(id)sender {
+    
+    // 卫星地图
+    self.mapView.mapType = BMKMapTypeSatellite;
+    self.button_normal.selected = NO;
+    self.button_satellite.selected = YES;
+}
+
+- (void)commit:(id)sender {
+    
+    self.editing = NO;
+    
+    self.mapView.scrollEnabled = YES;
+    
+    // 经度（竖）
+    CGFloat latitude = self.mapView.region.center.latitude;
+    // 纬度（横）
+    CGFloat longitude = self.mapView.region.center.longitude;
+    
+    CGFloat latitudeDelta = self.mapView.region.span.latitudeDelta;
+    CGFloat longitudeDelta = self.mapView.region.span.longitudeDelta;
+    
+    CGFloat minLat = latitude - (latitudeDelta / 2.0);
+    CGFloat minLng = longitude - (longitudeDelta / 2.0);
+    
+    CGFloat maxLat = latitude + (latitudeDelta / 2.0);
+    CGFloat maxLng = longitude + (longitudeDelta / 2.0);
+    
+    self.locMin = [[CLLocation alloc] initWithLatitude:minLat longitude:minLng];
+    
+    self.locMax = [[CLLocation alloc] initWithLatitude:maxLat longitude:maxLng];
+    
+    //  如果无添加监控区域权限，则返回
+    if (![[HYManager sharedManager].currentUser haveAddMonitorRight]) return;
+    
+    double distance = [self.locMin distanceFromLocation:self.locMax];
+    
+    if (distance > 15000) {
+        
+        [HYFoundationCommon promotDialogWithTitle:@"设置" message:@"区域过大，请缩小后再试！"];
+        return;
+    }
+    
+    self.pointAnnotation1 = self.mapView.annotations[0];
+    self.pointAnnotation2 = self.mapView.annotations[1];
+    self.pointAnnotation3 = self.mapView.annotations[2];
+    self.pointAnnotation4 = self.mapView.annotations[3];
+    
+    CLLocationCoordinate2D coordinate1 = self.pointAnnotation1.coordinate;
+    CLLocationCoordinate2D coordinate2 = self.pointAnnotation2.coordinate;
+    CLLocationCoordinate2D coordinate3 = self.pointAnnotation3.coordinate;
+    CLLocationCoordinate2D coordinate4 = self.pointAnnotation4.coordinate;
+    
+    {
+        CLLocation *loc1 = [[CLLocation alloc] initWithLatitude:coordinate1.latitude longitude:coordinate1.longitude];
+        
+        CLLocation *loc2 = [[CLLocation alloc] initWithLatitude:coordinate4.latitude longitude:coordinate4.longitude];
+        
+        double distance = [loc1 distanceFromLocation:loc2];
+        
+        if (distance > 15000) {
+            
+            [HYFoundationCommon promotDialogWithTitle:@"设置" message:@"区域过大，请缩小后再试！"];
+            return;
+        }
+    }
+    
+    // 清除图上所有点
+    [self.mapView removeAnnotations:self.mapView.annotations];
+    // 清楚图上覆盖
+    [self.mapView removeOverlays:self.mapView.overlays];
+    // 重新设置图上元素
+    [self makeSubViews];
+    
+    HYMonitorAlertView *alertView = [[HYMonitorAlertView alloc] init];
+    
+    alertView.frame = HYSharedAppDelegate.window.bounds;
+    
+    alertView.delegate = self;
+    
+    [HYSharedAppDelegate.window addSubview:alertView];
+}
+
+- (void)cancel:(id)sender {
+    
+    self.editing = NO;
+    
+    self.locMin = nil;
+    self.locMax = nil;
+    
+    self.mapView.scrollEnabled = YES;
+    // 清除图上所有点
+    [self.mapView removeAnnotations:self.mapView.annotations];
+    // 清楚图上覆盖
+    [self.mapView removeOverlays:self.mapView.overlays];
+    // 重新设置图上元素
+    [self makeSubViews];
+    
+    [self mapView:self.mapView regionDidChangeAnimated:YES];
+}
+
+- (void)threeClicked:(UIGestureRecognizer *)gestureRecognizer {
+    
+    if (gestureRecognizer.state == UIGestureRecognizerStateEnded) {
+    
+        //  如果无添加监控区域权限，则返回
+        if (![[HYManager sharedManager].currentUser haveAddMonitorRight]) return;
+        
+        self.editing = YES;
+        
+        [self.mapView removeAnnotations:self.mapView.annotations];
+        
+        //坐标转换
+        CGPoint touchPoint = [gestureRecognizer locationInView:_mapView];
+        
+        {
+            // 第一个点
+            CLLocationCoordinate2D coordinate_setting = [self.mapView convertPoint:touchPoint toCoordinateFromView:_mapView];
+            
+            NSString *title = [NSString stringWithFormat:@"%f, %f", coordinate_setting.longitude, coordinate_setting.latitude];
+            
+            self.pointAnnotation1 = [[BMKPointAnnotation alloc] init];
+            self.pointAnnotation1.coordinate = coordinate_setting;
+            self.pointAnnotation1.title = title;
+            
+            [self.mapView addAnnotation:self.pointAnnotation1];
+        }
+        
+        {
+            CGPoint point = CGPointMake(touchPoint.x + 100, touchPoint.y);
+            // 第二个点
+            CLLocationCoordinate2D coordinate_setting = [self.mapView convertPoint:point toCoordinateFromView:_mapView];
+            
+            NSString *title = [NSString stringWithFormat:@"%f, %f", coordinate_setting.longitude, coordinate_setting.latitude];
+            
+            self.pointAnnotation2 = [[BMKPointAnnotation alloc] init];
+            self.pointAnnotation2.coordinate = coordinate_setting;
+            self.pointAnnotation2.title = title;
+            
+            [self.mapView addAnnotation:self.pointAnnotation2];
+        }
+        
+        {
+            CGPoint point = CGPointMake(touchPoint.x, touchPoint.y + 100);
+            // 第三个点
+            CLLocationCoordinate2D coordinate_setting = [self.mapView convertPoint:point toCoordinateFromView:_mapView];
+            
+            NSString *title = [NSString stringWithFormat:@"%f, %f", coordinate_setting.longitude, coordinate_setting.latitude];
+            
+            self.pointAnnotation3 = [[BMKPointAnnotation alloc] init];
+            self.pointAnnotation3.coordinate = coordinate_setting;
+            self.pointAnnotation3.title = title;
+            
+            [self.mapView addAnnotation:self.pointAnnotation3];
+        }
+        
+        {
+            CGPoint point = CGPointMake(touchPoint.x + 100, touchPoint.y + 100);
+            // 第四个点
+            CLLocationCoordinate2D coordinate = [self.mapView convertPoint:point toCoordinateFromView:_mapView];
+            
+            NSString *title = [NSString stringWithFormat:@"%f, %f", coordinate.longitude, coordinate.latitude];
+            
+            self.pointAnnotation4 = [[BMKPointAnnotation alloc] init];
+            self.pointAnnotation4.coordinate = coordinate;
+            self.pointAnnotation4.title = title;
+            
+            [self.mapView addAnnotation:self.pointAnnotation4];
+        }
+        
+        self.mapView.scrollEnabled = NO;
+        
+        [self drawRectangleArea];
+        
+        self.navigationItem.rightBarButtonItems = [HYFoundationCommon barButtonItemWithTarget:self select:@selector(commit:) withTitle:@"确认" withRect:DPBarItemRect];
+        self.navigationItem.leftBarButtonItems = [HYFoundationCommon barButtonItemWithTarget:self select:@selector(cancel:) withTitle:@"取消" withRect:DPBarItemRect];
+    }
+}
+- (void)drawRectangleArea {
+    
+    [self.mapView removeOverlays:self.mapView.overlays];
+    
+    self.pointAnnotation1 = self.mapView.annotations[0];
+    self.pointAnnotation2 = self.mapView.annotations[1];
+    self.pointAnnotation3 = self.mapView.annotations[2];
+    self.pointAnnotation4 = self.mapView.annotations[3];
+    
+    BMKMapPoint pt1 = BMKMapPointForCoordinate(self.pointAnnotation1.coordinate);
+    
+    BMKMapPoint pt2 = BMKMapPointForCoordinate(self.pointAnnotation2.coordinate);
+    
+    BMKMapPoint pt3 = BMKMapPointForCoordinate(self.pointAnnotation3.coordinate);
+    
+    BMKMapPoint pt4 = BMKMapPointForCoordinate(self.pointAnnotation4.coordinate);
+    
+    BMKMapPoint *points = new BMKMapPoint[4];
+    points[0].x = pt1.x;
+    points[0].y = pt1.y;
+    points[1].x = pt2.x;
+    points[1].y = pt2.y;
+    points[2].x = pt4.x;
+    points[2].y = pt4.y;
+    points[3].x = pt3.x;
+    points[3].y = pt3.y;
+    HYCustomOverlay *customOverlay = [[HYCustomOverlay alloc] initWithPoints:points count:4];
+    [self.mapView addOverlay:customOverlay];
+    delete[] points;
+}
+
+#pragma mark - method
+
+// 添加图层，绘制矩形
+- (BMKOverlayView *)mapView:(BMKMapView *)mapView viewForOverlay:(id <BMKOverlay>)overlay {
+    
+    if ([overlay isKindOfClass:[HYCustomOverlay class]]) {
+        
+        HYCustomOverlayView* cutomView = [[HYCustomOverlayView alloc] initWithOverlay:overlay];
+        cutomView.strokeColor = [UIColor redColor];
+        cutomView.fillColor = DP_HexRGBAlpha(0xf08600, 0.5);
+        cutomView.lineWidth = 2.0;
+        return cutomView;
+    }
+    
+    return nil;
+}
+
+// 根据anntation生成对应的View
+- (BMKAnnotationView *)mapView:(BMKMapView *)mapView viewForAnnotation:(id <BMKAnnotation>)annotation {
+    
+    if ([annotation isKindOfClass:[HYMapPointAnnotion class]]) {
+        // 船舶
+        HYMapPointAnnotion *ann = (HYMapPointAnnotion *)annotation;
+        
+        HYAnnotationView *annotationView = (HYAnnotationView *)[mapView dequeueReusableAnnotationViewWithIdentifier:@"HYAnnotationView"];
+        
+        if (annotationView == nil) {
+            
+            annotationView = [[HYAnnotationView alloc] initWithAnnotation:annotation reuseIdentifier:@"HYAnnotationView"];
+        }
+        
+        UIImage *image = [UIImage imageNamed:@"ship_default_right"];
+        
+        if(ann.ship.hasMoorCJH) {
+            
+            int course = @(ann.ship.course).intValue % 360;
+            
+            if(course >= 0 && course <= 180) {
+                
+                image = [UIImage imageNamed:@"cjh_v_moor_right"];
+            }
+            else if(course > 180 && course <= 360) {
+                
+                image = [UIImage imageNamed:@"cjh_v_moor_left"];
+            }
+        }
+        else {
+            
+            if(ann.ship.isV) {
+                
+                int course = @(ann.ship.course).intValue % 360;
+                
+                if(course >= 0 && course <= 180) {
+                    
+                    image = [UIImage imageNamed:@"cjh_v_right"];
+                }
+                else if(course > 180 && course <= 360) {
+                    
+                    image = [UIImage imageNamed:@"cjh_v_left"];
+                }
+            }
+            else if(ann.ship.isP) {
+                
+                int course = @(ann.ship.course).intValue % 360;
+                
+                if(course >= 0 && course <= 180) {
+                    
+                    image = [UIImage imageNamed:@"cjh_p_right"];
+                }
+                else if(course > 180 && course <= 360) {
+                    
+                    image = [UIImage imageNamed:@"cjh_p_left"];
+                }
+            }
+            else {
+                
+                int course = @(ann.ship.course).intValue % 360;
+                
+                if(course >= 0 && course <= 180) {
+                    
+                    image = [UIImage imageNamed:@"ship_default_right"];
+                }
+                else if(course > 180 && course <= 360) {
+                    
+                    image = [UIImage imageNamed:@"ship_default_left"];
+                }
+            }
+        }
+
+        annotationView.image = image;
+        
+        annotationView.canShowCallout = NO;
+        
+        annotationView.title = ann.title;
+        
+        return annotationView;
+    }
+    else if ([annotation isKindOfClass:[BMKPointAnnotation class]]) {
+        //普通annotation
+        CLLocationCoordinate2D coordinate = annotation.coordinate;
+        NSString *annotationViewId = [NSString stringWithFormat:@"%f,%f", coordinate.latitude, coordinate.longitude];
+        BMKPinAnnotationView *annotationView = (BMKPinAnnotationView *)[mapView dequeueReusableAnnotationViewWithIdentifier:annotationViewId];
+        
+        if (annotationView == nil) {
+            
+            annotationView = [[BMKPinAnnotationView alloc] initWithAnnotation:annotation reuseIdentifier:annotationViewId];
+            // 设置可拖拽
+            annotationView.draggable = YES;
+            // 从天上掉下效果
+            annotationView.animatesDrop = YES;
+        }
+        
+        return annotationView;
+    }
+    return nil;
+}
+
+- (void)mapView:(BMKMapView *)mapView didSelectAnnotationView:(BMKAnnotationView *)view {
+    
+    if (!view) return;
+    
+    [self.mapView deselectAnnotation:view.annotation animated:YES];
+    
+    id <BMKAnnotation> annotation = view.annotation;
+    
+    if ([annotation isKindOfClass:[HYMapPointAnnotion class]]) {
+        // 船舶
+        HYMapPointAnnotion *ann = (HYMapPointAnnotion *)annotation;
+        
+        [self gotoShipDetailViewController:ann.ship];
+    }
+}
+
+/**
+ *拖动annotation view时，若view的状态发生变化，会调用此函数。ios3.2以后支持
+ *@param mapView 地图View
+ *@param view annotation view
+ *@param newState 新状态
+ *@param oldState 旧状态
+ */
+- (void)mapView:(BMKMapView *)mapView annotationView:(BMKAnnotationView *)view didChangeDragState:(BMKAnnotationViewDragState)newState
+   fromOldState:(BMKAnnotationViewDragState)oldState {
+    
+    [self drawRectangleArea];
+}
+
+// 地图区域即将改变时会调用此接口
+- (void)mapView:(BMKMapView *)mapView regionWillChangeAnimated:(BOOL)animated {
+    
+    self.canRequest = NO;
+    
+    if(self.timer_auto && self.timer_auto.isValid) {
+        
+        [self.timer_auto invalidate];
+        self.timer_auto = nil;
+    }
+}
+// 地图区域改变完成后会调用此接口
+- (void)mapView:(BMKMapView *)mapView regionDidChangeAnimated:(BOOL)animated {
+    
+    if (self.editing) return;
+    
+    if (self.searching) return;
+    
+    self.canRequest = YES;
+    
+    [self performSelector:@selector(fetchAreaShips) withObject:nil afterDelay:0.5];
+}
+
+#pragma mark - BMKLocationServiceDelegate methods
+
+- (void)didFailToLocateUserWithError:(NSError *)error {
+    
+    // 关闭定位服务
+    [self.locationService stopUserLocationService];
+    // 设置地图不显示用户位置
+    self.mapView.showsUserLocation = NO;
+}
+
+- (void)didUpdateBMKUserLocation:(BMKUserLocation *)userLocation {
+    
+    [self.mapView updateLocationData:userLocation];
+    
+    CLLocationCoordinate2D coordinate = userLocation.location.coordinate;
+    
+    // 兴隆洲服务区
+    BMKCoordinateRegion region;
+    region.center = coordinate;
+    region.span.latitudeDelta  = 0.5;
+    region.span.longitudeDelta = 0.5;
+    self.mapView.region = region;
+    
+    // 关闭定位服务
+    [self.locationService stopUserLocationService];
+}
+
+#pragma mark - 获取视野区域船舶
+
+- (void)fetchAreaShips {
+    
+    if (!self.canRequest) return;
+    
+    if (self.editing) return;
+    
+    if (self.searching) return;
+    
+    // 经度（竖）
+    CGFloat latitude = self.mapView.region.center.latitude;
+    // 纬度（横）
+    CGFloat longitude = self.mapView.region.center.longitude;
+    
+    CGFloat latitudeDelta = self.mapView.region.span.latitudeDelta;
+    CGFloat longitudeDelta = self.mapView.region.span.longitudeDelta;
+    
+    CGFloat minLat = latitude - (latitudeDelta / 2.0);
+    CGFloat minLng = longitude - (longitudeDelta / 2.0);
+    
+    CGFloat maxLat = latitude + (latitudeDelta / 2.0);
+    CGFloat maxLng = longitude + (longitudeDelta / 2.0);
+    
+    CLLocation *locMin = [[CLLocation alloc] initWithLatitude:minLat longitude:minLng];
+    
+    CLLocation *locMax = [[CLLocation alloc] initWithLatitude:maxLat longitude:maxLng];
+    
+    double distance = [locMin distanceFromLocation:locMax];
+    
+    if (distance > 15000) {
+        
+        return;
+    }
+    
+    NSString *url = @"/ais/areaShips";
+
+    NSDictionary *params = @{
+                             @"token" : HYNONNil([HYManager sharedManager].currentUser.token),
+                             @"lat1" : @(minLat),
+                             @"lon1" : @(minLng),
+                             @"lat2" : @(maxLat),
+                             @"lon2" : @(maxLng),
+                             };
+    
+    WEAKSELF
+    
+    [HYHttpManager postRequestWithUrl:url params:params parserClass:[HYShipsList class] successBlock:^(id response) {
+
+        if (!weakSelf.canRequest) return;
+
+        if (weakSelf.editing) return;
+        
+        if (weakSelf.searching) return;
+
+        dispatch_async(dispatch_get_main_queue(), ^{
+
+            [weakSelf.mapView removeAnnotations:self.mapView.annotations];
+
+            HYShipsList *list = response;
+
+            for (HYShipInfo *info in list.data) {
+
+                CLLocationCoordinate2D coordinate_setting = CLLocationCoordinate2DMake(info.latitude, info.longitude);
+
+                NSString *title = ![NSString dp_isEmptyString:info.chName] ? info.chName : (![NSString dp_isEmptyString:info.shipName] ? info.shipName : info.mmsi);
+
+                HYMapPointAnnotion *pointAnnotation = [[HYMapPointAnnotion alloc] init];
+                pointAnnotation.coordinate = coordinate_setting;
+                pointAnnotation.title = title;
+                pointAnnotation.ship = info;
+
+                [weakSelf.mapView addAnnotation:pointAnnotation];
+            }
+
+            weakSelf.canRequest = YES;
+
+            if(self.timer_auto && self.timer_auto.isValid) {
+
+                [self.timer_auto invalidate];
+                self.timer_auto = nil;
+            }
+
+            weakSelf.timer_auto = [NSTimer scheduledTimerWithTimeInterval:AIS_REQUEST_INTERVAL target:self selector:@selector(fetchAreaShips) userInfo:nil repeats:YES];
+        });
+
+    } failBlock:^(NSError *error) {
+
+        weakSelf.canRequest = NO;
+    }];
+}
+
+#pragma mark - HYMonitorAlertViewDelegate method
+
+- (void)monitorAlertView:(HYMonitorAlertView *)view title:(NSString *)title refmin:(NSInteger)refmin isCJH:(BOOL)isCJH {
+    
+    HYLog(@"%@", title);
+    
+    //  如果无添加监控区域权限，则返回
+    if (![[HYManager sharedManager].currentUser haveAddMonitorRight]) return;
+    
+    NSString *lat = [NSString stringWithFormat:@"%f,%f,%f,%f", self.pointAnnotation1.coordinate.latitude, self.pointAnnotation2.coordinate.latitude, self.pointAnnotation4.coordinate.latitude, self.pointAnnotation3.coordinate.latitude];
+    
+    NSString *lon = [NSString stringWithFormat:@"%f,%f,%f,%f", self.pointAnnotation1.coordinate.longitude, self.pointAnnotation2.coordinate.longitude, self.pointAnnotation4.coordinate.longitude, self.pointAnnotation3.coordinate.longitude];
+    
+    NSString *url = @"/area/addArea";
+    
+    NSDictionary *params = @{
+                             @"token" : HYNONNil([HYManager sharedManager].currentUser.token),
+                             @"name" : HYNONNil(title),
+                             @"type" : isCJH ? @(1) : @(2),
+                             @"latitude" : lat,
+                             @"longitude" : lon,
+                             @"areaLat1" : @(self.locMin.coordinate.latitude),
+                             @"areaLon1" : @(self.locMin.coordinate.longitude),
+                             @"areaLat2" : @(self.locMax.coordinate.latitude),
+                             @"areaLon2" : @(self.locMax.coordinate.longitude),
+                             @"refmin" : @(refmin),
+                             };
+    
+    WEAKSELF
+    
+    [HYHttpManager postRequestWithUrl:url params:params parserClass:[HYBaseModel class] successBlock:^(id response) {
+        
+        // 成功
+        [weakSelf cancel:nil];
+        [HYFoundationCommon promotDialogWithTitle:@"设置" message:@"监控区域已设置，稍后将启动监测"];
+        
+    } failBlock:^(NSError *error) {
+        
+        [HYFoundationCommon promotDialogWithTitle:@"设置" message:[error domain]];
+    }];
+}
+
+#pragma mark - UISearchBarDelegate methods
+
+- (void)searchBarTextDidBeginEditing:(UISearchBar *)searchBar {
+    
+    searchBar.showsCancelButton = YES;
+    
+    searchBar.isSupportNullSearch = YES;
+    
+    // 修改取消按钮
+    {
+        UIButton *button_cancel = [searchBar valueForKey:@"_cancelButton"];
+        
+        if (button_cancel) {
+            
+            [button_cancel setTitle:@"取消" forState:UIControlStateNormal];
+            button_cancel.titleLabel.font = [UIFont systemFontOfSize:13];
+        }
+    }
+}
+
+- (BOOL)searchBarShouldEndEditing:(UISearchBar *)searchBar {
+    
+    searchBar.showsCancelButton = NO;
+    
+    [self searchKeyboardClickedWith:searchBar.text];
+    
+    return YES;
+}
+
+- (void)searchBar:(UISearchBar *)searchBar textDidChange:(NSString *)searchText {
+    // 文字有变化
+}
+
+- (void)searchBarCancelButtonClicked:(UISearchBar *)searchBar {
+    // 取消按钮被点击
+    
+    [searchBar resignFirstResponder];
+}
+
+- (void)searchBarSearchButtonClicked:(UISearchBar *)searchBar {
+    // 搜索按钮被点击
+    
+    [searchBar resignFirstResponder];
+}
+
+- (void)searchWith:(NSString *)key {
+    
+    self.keyText = key;
+    
+    if ([NSString dp_isEmptyString:key]) {
+        
+        self.searching = NO;
+        return;
+    }
+    
+    if(self.timer_auto && self.timer_auto.isValid) {
+        
+        [self.timer_auto invalidate];
+        self.timer_auto = nil;
+    }
+    
+    self.canRequest = NO;
+    
+    self.searching = YES;
+    
+    NSString *url = @"/ais/ship";
+    
+    NSDictionary *params = @{
+                             @"token" : HYNONNil([HYManager sharedManager].currentUser.token),
+                             @"keyword" : HYNONNil(self.keyText),
+                             };
+    
+    WEAKSELF
+    
+    [HYHttpManager postRequestWithUrl:url params:params parserClass:[HYShipsList class] successBlock:^(id response) {
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+            
+            [weakSelf.mapView removeAnnotations:self.mapView.annotations];
+            
+            HYShipsList *list = response;
+            
+            if (list && list.data.count > 0) {
+                
+                for (HYShipInfo *info in list.data) {
+                    
+                    CLLocationCoordinate2D coordinate_setting = CLLocationCoordinate2DMake(info.latitude, info.longitude);
+                    
+                    NSString *title = ![NSString dp_isEmptyString:info.chName] ? info.chName : (![NSString dp_isEmptyString:info.shipName] ? info.shipName : info.mmsi);
+                    
+                    HYMapPointAnnotion *pointAnnotation = [[HYMapPointAnnotion alloc] init];
+                    pointAnnotation.coordinate = coordinate_setting;
+                    pointAnnotation.title = title;
+                    pointAnnotation.ship = info;
+                    
+                    [weakSelf.mapView addAnnotation:pointAnnotation];
+                }
+                HYShipInfo *info = [list.data objectAtIndex:0];
+
+                BMKCoordinateRegion region;
+                region.center = CLLocationCoordinate2DMake(info.latitude, info.longitude);
+                region.span.latitudeDelta  = 0.05;
+                region.span.longitudeDelta = 0.05;
+                weakSelf.mapView.region = region;
+            }
+        });
+        
+    } failBlock:^(NSError *error) {
+        
+    }];
+}
+
+- (void)searchKeyboardClickedWith:(NSString *)key {
+    
+    [self searchWith:key];
+    
+    [self.searchBar resignFirstResponder];
+}
+
+#pragma mark - HYHomeNotificationViewDelegate methed
+
+- (void)homeNotificationView:(HYHomeNotificationView *)view withObj:(HYNotification *)obj {
+    
+    HYLog(@"点击通知index:%ld", [self.array_notifications indexOfObject:obj]);
+    
+    if (obj && obj.notification_mmsi) {
+        
+        self.searchBar.text = obj.notification_mmsi;
+        [self searchWith:obj.notification_mmsi];
+    }
+}
+
+#pragma mark - Action methods
+
+- (void)gotoShipDetailViewController:(HYShipInfo *)ship {
+    
+    if ([ship isV]) {
+        // 只有长江汇大V才显示船舶详情
+        HYShipDetailViewController *viewController = [[HYShipDetailViewController alloc] init];
+        viewController.ship = ship;
+        [self pushNewViewController:viewController];
+    }
+    else {
+        
+        HYShipTrailViewController *viewController = [[HYShipTrailViewController alloc] init];
+        viewController.ship = ship;
+        [self pushNewViewController:viewController];
+    }
+}
+
+- (void)stationClicked:(id)sender {
+    
+    self.selectView.hidden = NO;
+}
+
+- (void)gotoMessage:(id)sender {
+    HYMessageCenterViewController *viewController = [[HYMessageCenterViewController alloc] init];
+    [self pushNewViewController:viewController];
+}
+
+#pragma mark - HYStationItemViewDelegate methed
+
+- (void)stationItemViewChange:(HYStationItemView *)view {
+    
+    [self stationClicked:view];
+}
+
+#pragma mark - Properties
+
+- (HYStationItemView *)stationItemView {
+    
+    if (!_stationItemView) {
+        
+        _stationItemView = [[HYStationItemView alloc] init];
+        _stationItemView.delegate = self;
+        _stationItemView.backgroundColor = [UIColor clearColor];
+        _stationItemView.frame = CGRectMake(0, 0, 40, 40);
+    }
+    
+    return _stationItemView;
+}
+
+- (HYHomeTitleView *)headerView {
+    
+    if (!_headerView) {
+        
+        _headerView = [[HYHomeTitleView alloc] init];
+        _headerView.intrinsicContentSize = CGSizeMake(ScreenWidth - 60, 44);
+        _headerView.backgroundColor = [UIColor clearColor];
+        _headerView.frame = CGRectMake(0, 0, ScreenWidth - 60, 44);
+        
+        [_headerView addSubview:self.searchBar];
+        
+        WEAKOBJECT(_headerView)
+        [self.searchBar mas_makeConstraints:^(MASConstraintMaker *make) {
+            
+            make.edges.equalTo(weakObject);
+        }];
+    }
+    
+    return _headerView;
+}
+
+- (UISearchBar *)searchBar {
+    
+    if(!_searchBar) {
+        
+        _searchBar = [[UISearchBar alloc] init];
+        _searchBar.placeholder = @"请输入船舶mmsi或船名";
+        _searchBar.delegate = self;
+        
+        if (DP_ISIOS11) {
+            
+            [[self.searchBar.heightAnchor constraintEqualToConstant:44.0] setActive:YES];
+        }
+        
+        UITextField *searchField = [_searchBar valueForKey:@"_searchField"];
+        
+        if (searchField) {
+            
+            [searchField setFont:[UIFont systemFontOfSize:13]];
+            [searchField setValue:[UIFont systemFontOfSize:13] forKeyPath:@"_placeholderLabel.font"];
+            searchField.layer.cornerRadius = 5.0;
+            searchField.layer.borderColor = DP_HexRGB(0xc8c9ca).CGColor;
+            searchField.layer.borderWidth = 0.5;
+            searchField.layer.masksToBounds = YES;
+        }
+    }
+    
+    return _searchBar;
+}
+
+- (HYSelectView *)selectView {
+    
+    if (!_selectView) {
+        
+        _selectView = [[[NSBundle mainBundle] loadNibNamed:@"HYSelectView" owner:nil options:nil] lastObject];
+        _selectView.hidden = YES;
+        
+        MJWeakSelf;
+        _selectView.selectBlock = ^(id obj, NSInteger index) {
+            weakSelf.selectView.hidden = YES;
+            
+            HYStation *station = [weakSelf.array_stations objectAtIndex:index];
+            
+            [weakSelf.stationItemView bindWithModel:station];
+            
+            // 兴隆洲服务区
+            BMKCoordinateRegion region;
+            region.center = CLLocationCoordinate2DMake(station.latitude, station.longitude);
+            region.span.latitudeDelta  = 0.05;
+            region.span.longitudeDelta = 0.05;
+            weakSelf.mapView.region = region;
+        };
+        
+        [self.view addSubview:_selectView];
+        
+        [_selectView mas_makeConstraints:^(MASConstraintMaker *make) {
+            
+            make.edges.equalTo(weakSelf.view);
+        }];
+    }
+    
+    return _selectView;
+}
+
+- (HYHomeNotificationView *)homeNotificationView {
+    
+    if (!_homeNotificationView) {
+        
+        _homeNotificationView = [[HYHomeNotificationView alloc] initWithInterval:3];
+        _homeNotificationView.delegate = self;
+        _homeNotificationView.layer.masksToBounds = YES;
+        _homeNotificationView.layer.cornerRadius = 5;
+        _homeNotificationView.hidden = YES;
+        [self.view addSubview:_homeNotificationView];
+        
+        WEAKSELF
+        [_homeNotificationView mas_makeConstraints:^(MASConstraintMaker *make) {
+            
+            make.top.equalTo(weakSelf.view).offset(10);
+            make.left.equalTo(weakSelf.view).offset(10);
+            make.right.equalTo(weakSelf.view).offset(-10);
+            make.height.mas_equalTo(120);
+        }];
+    }
+    return _homeNotificationView;
+}
+
+#pragma mark -
+
+- (void)dealloc {
+ 
+    self.mapView.delegate = nil;
+    self.mapView = nil;
+    
+    self.locationService.delegate = nil;
+}
+
+@end

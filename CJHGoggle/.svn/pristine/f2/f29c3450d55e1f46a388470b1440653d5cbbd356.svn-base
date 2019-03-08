@@ -1,0 +1,300 @@
+//
+//  HYHomeHeaderView.m
+//  Direction
+//
+//  Created by 耿建峰 on 2017/10/15.
+//  Copyright © 2017年 gengjf. All rights reserved.
+//
+
+#import "HYShipInfoHeaderView.h"
+
+#import "HYShipDetailInfo.h"
+
+#import "HYShipInfo.h"
+
+#import "HYUserLabel.h"
+
+@interface HYShipInfoHeaderView ()
+
+@property (weak, nonatomic) IBOutlet UIView *view;
+
+@property (weak, nonatomic) IBOutlet UIView *view_top;
+@property (weak, nonatomic) IBOutlet UILabel *label_ship_name;
+
+@property (weak, nonatomic) IBOutlet UIButton *button_star;
+@property (weak, nonatomic) IBOutlet NSLayoutConstraint *layoutConstraint_star;
+
+@property (weak, nonatomic) IBOutlet UIView *view_middle;
+@property (weak, nonatomic) IBOutlet UILabel *label_distance;
+@property (weak, nonatomic) IBOutlet UILabel *label_v_user;
+@property (weak, nonatomic) IBOutlet UILabel *label_moor_station;
+
+@property (weak, nonatomic) IBOutlet UIView *view_bottom;
+@property (weak, nonatomic) IBOutlet UIButton *button_tag_1;
+@property (weak, nonatomic) IBOutlet UIButton *button_tag_2;
+@property (weak, nonatomic) IBOutlet UIButton *button_tag_3;
+@property (weak, nonatomic) IBOutlet UIButton *button_tag_4;
+@property (weak, nonatomic) IBOutlet UIButton *button_tag_5;
+
+@property (weak, nonatomic) IBOutlet UIView *view_seg;
+@property (weak, nonatomic) IBOutlet UIButton *button_user;
+@property (weak, nonatomic) IBOutlet UIButton *button_pay_record;
+
+@property (nonatomic, strong) HYShipDetailInfo *detail;
+
+@property (nonatomic, assign) HYSHIPINFO_HEAD_TYPE type;
+
+@end
+
+@implementation HYShipInfoHeaderView
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+    
+    if(self = [super initWithCoder:aDecoder]) {
+        
+        [[NSBundle mainBundle] loadNibNamed:@"HYShipInfoHeaderView" owner:self options:nil];
+        
+        [self addSubview:self.view];
+        
+        [self initialize];
+    }
+    
+    return self;
+}
+
+- (void)awakeFromNib {
+    
+    [super awakeFromNib];
+    
+    [self initialize];
+}
+
+- (instancetype)init {
+    
+    if(self = [super init]) {
+        
+        [[NSBundle mainBundle] loadNibNamed:@"HYShipInfoHeaderView" owner:self options:nil];
+        
+        [self addSubview:self.view];
+        
+        [self initialize];
+    }
+    
+    return self;
+}
+
+- (void)layoutSubviews {
+    
+    [super layoutSubviews];
+    
+    self.view.frame = self.bounds;
+}
+
+#pragma mark - PSBaseViewProtocol methed
+
+- (void)initialize {
+    
+    self.type = HYSHIPINFO_HEAD_USER;
+}
+
+- (void)bindWithModel:(id)viewModel {
+    
+    if (viewModel && [viewModel isKindOfClass:[HYShipDetailInfo class]]) {
+        
+        self.detail = viewModel;
+        
+        NSString *title = ![NSString dp_isEmptyString:self.detail.shipBaseInfo.chName] ? self.detail.shipBaseInfo.chName : (![NSString dp_isEmptyString:self.detail.shipBaseInfo.shipName] ? self.detail.shipBaseInfo.shipName : self.detail.shipBaseInfo.mmsi);
+        
+        self.label_ship_name.text = title;
+        
+        self.label_distance.text = [NSString stringWithFormat:@"%.01f公里", self.detail.distance.doubleValue / 1000];
+        
+        self.label_v_user.text = ([NSString dp_isEmptyString:self.detail.nameandphone] ? @"暂无" : self.detail.nameandphone);
+        
+        self.label_moor_station.text = ([NSString dp_isEmptyString:self.detail.moortime] ? @"暂无靠泊信息" : self.detail.moortime);
+        
+        if (self.detail.ismyship && self.detail.labelList && self.detail.labelList.count > 0) {
+            
+            self.view_bottom.hidden = NO;
+            self.button_star.hidden = NO;
+            
+            CGFloat height = self.button_tag_1.frame.size.height + 20;
+            
+            WEAKSELF
+            [self.view_bottom mas_remakeConstraints:^(MASConstraintMaker *make) {
+                
+                make.left.and.right.equalTo(weakSelf);
+                make.top.equalTo(weakSelf.view_middle.mas_bottom);
+                make.height.mas_equalTo(height);
+            }];
+            
+            [self.view_seg mas_remakeConstraints:^(MASConstraintMaker *make) {
+                
+                make.left.and.right.equalTo(weakSelf);
+                make.top.equalTo(weakSelf.view_bottom.mas_bottom).offset(10);
+                make.height.mas_equalTo(43);
+            }];
+            
+            {
+                CGRect frame = self.frame;
+                frame.size.height = 229 + height;
+                self.frame = frame;
+            }
+        }
+        else {
+            
+            self.view_bottom.hidden = YES;
+            self.button_star.hidden = YES;
+            
+            self.layoutConstraint_star.constant = 0;
+            
+            CGFloat height = self.view_bottom.frame.size.height;
+            WEAKSELF
+            [self.view_bottom mas_remakeConstraints:^(MASConstraintMaker *make) {
+                
+                make.left.and.right.equalTo(weakSelf);
+                make.top.equalTo(weakSelf.view_middle.mas_bottom);
+                make.height.mas_equalTo(0);
+            }];
+            
+            [self.view_seg mas_remakeConstraints:^(MASConstraintMaker *make) {
+                
+                make.left.and.right.equalTo(weakSelf);
+                make.top.equalTo(weakSelf.view_bottom.mas_bottom).offset(10);
+                make.height.mas_equalTo(43);
+            }];
+            
+            {
+                CGRect frame = self.frame;
+                frame.size.height -= height;
+                self.frame = frame;
+            }
+        }
+        
+        self.button_star.selected = self.detail.isstar;
+        
+        if (self.detail.labelList && self.detail.labelList.count > 0) {
+            
+            if (self.detail.labelList.count >= 5) {
+                
+                [self.button_tag_1 setTitle:self.detail.labelList[0].name forState:UIControlStateNormal];
+                [self.button_tag_2 setTitle:self.detail.labelList[1].name forState:UIControlStateNormal];
+                [self.button_tag_3 setTitle:self.detail.labelList[2].name forState:UIControlStateNormal];
+                [self.button_tag_4 setTitle:self.detail.labelList[3].name forState:UIControlStateNormal];
+                [self.button_tag_5 setTitle:self.detail.labelList[4].name forState:UIControlStateNormal];
+                self.button_tag_1.hidden = NO;
+                self.button_tag_2.hidden = NO;
+                self.button_tag_3.hidden = NO;
+                self.button_tag_4.hidden = NO;
+                self.button_tag_5.hidden = NO;
+            }
+            else if (self.detail.labelList.count >= 4) {
+                
+                [self.button_tag_1 setTitle:self.detail.labelList[0].name forState:UIControlStateNormal];
+                [self.button_tag_2 setTitle:self.detail.labelList[1].name forState:UIControlStateNormal];
+                [self.button_tag_3 setTitle:self.detail.labelList[2].name forState:UIControlStateNormal];
+                [self.button_tag_4 setTitle:self.detail.labelList[3].name forState:UIControlStateNormal];
+                self.button_tag_1.hidden = NO;
+                self.button_tag_2.hidden = NO;
+                self.button_tag_3.hidden = NO;
+                self.button_tag_4.hidden = NO;
+                self.button_tag_5.hidden = YES;
+            }
+            else if (self.detail.labelList.count >= 3) {
+                
+                [self.button_tag_1 setTitle:self.detail.labelList[0].name forState:UIControlStateNormal];
+                [self.button_tag_2 setTitle:self.detail.labelList[1].name forState:UIControlStateNormal];
+                [self.button_tag_3 setTitle:self.detail.labelList[2].name forState:UIControlStateNormal];
+                self.button_tag_1.hidden = NO;
+                self.button_tag_2.hidden = NO;
+                self.button_tag_3.hidden = NO;
+                self.button_tag_4.hidden = YES;
+                self.button_tag_5.hidden = YES;
+            }
+            else if (self.detail.labelList.count >= 2) {
+                
+                [self.button_tag_1 setTitle:self.detail.labelList[0].name forState:UIControlStateNormal];
+                [self.button_tag_2 setTitle:self.detail.labelList[1].name forState:UIControlStateNormal];
+                self.button_tag_1.hidden = NO;
+                self.button_tag_2.hidden = NO;
+                self.button_tag_3.hidden = YES;
+                self.button_tag_4.hidden = YES;
+                self.button_tag_5.hidden = YES;
+            }
+            else if (self.detail.labelList.count >= 1) {
+                
+                [self.button_tag_1 setTitle:self.detail.labelList[0].name forState:UIControlStateNormal];
+                self.button_tag_1.hidden = NO;
+                self.button_tag_2.hidden = YES;
+                self.button_tag_3.hidden = YES;
+                self.button_tag_4.hidden = YES;
+                self.button_tag_5.hidden = YES;
+            }
+            else {
+                
+                self.button_tag_1.hidden = YES;
+                self.button_tag_2.hidden = YES;
+                self.button_tag_3.hidden = YES;
+                self.button_tag_4.hidden = YES;
+                self.button_tag_5.hidden = YES;
+            }
+        }
+        else {
+            
+            self.button_tag_1.hidden = YES;
+            self.button_tag_2.hidden = YES;
+            self.button_tag_3.hidden = YES;
+            self.button_tag_4.hidden = YES;
+            self.button_tag_5.hidden = YES;
+        }
+    }
+}
+
+- (HYSHIPINFO_HEAD_TYPE)currentSelectedType {
+    
+    return self.type;
+}
+
+#pragma mark - Action method
+
+- (IBAction)gotoHistoryTrail:(id)sender {
+    
+    if (self.delegate && [self.delegate respondsToSelector:@selector(shipInfoHeaderView:historyTrail:)]) {
+        
+        [self.delegate shipInfoHeaderView:self historyTrail:self.detail.shipBaseInfo];
+    }
+}
+
+- (IBAction)addStar:(id)sender {
+    
+    if (self.delegate && [self.delegate respondsToSelector:@selector(shipInfoHeaderViewAddStar:)]) {
+        
+        [self.delegate shipInfoHeaderViewAddStar:self];
+    }
+}
+
+- (IBAction)selectUserInfo:(id)sender {
+    
+    self.button_user.selected = YES;
+    self.button_pay_record.selected = NO;
+    self.type = HYSHIPINFO_HEAD_USER;
+    
+    if (self.delegate && [self.delegate respondsToSelector:@selector(shipInfoHeaderViewSelectUserInfo:)]) {
+        
+        [self.delegate shipInfoHeaderViewSelectUserInfo:self];
+    }
+}
+
+- (IBAction)selectPayRecord:(id)sender {
+    
+    self.button_user.selected = NO;
+    self.button_pay_record.selected = YES;
+    self.type = HYSHIPINFO_HEAD_PAY_RECORD;
+    
+    if (self.delegate && [self.delegate respondsToSelector:@selector(shipInfoHeaderViewSelectPayRecord:)]) {
+        
+        [self.delegate shipInfoHeaderViewSelectPayRecord:self];
+    }
+}
+
+@end

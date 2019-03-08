@@ -1,0 +1,161 @@
+//
+//  HYShipListViewController.m
+//  CJHGoggle
+//
+//  Created by 吴棒棒 on 2018/8/2.
+//  Copyright © 2018年 CJH. All rights reserved.
+//
+/**
+ *　　　　　　　 ┏┓       ┏┓+ +
+ *　　　　　　　┏┛┻━━━━━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　 ┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 █████━█████  ┃+
+ *　　　　　　　┃　　　　　　 ┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　 ┃ + +
+ *　　　　　　　┗━━┓　　　 ┏━┛
+ *               ┃　　  ┃
+ *　　　　　　　　　┃　　  ┃ + + + +
+ *　　　　　　　　　┃　　　┃　Code is far away from     bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　         神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　 ┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━━━┳┓┏┛ + + + +
+ *　　　　　　　　　 ┃┫┫　 ┃┫┫
+ *　　　　　　　　　 ┗┻┛　 ┗┻┛+ + + +
+ */
+
+#import "HYShipListViewController.h"
+#import "HYSearchShipViewController.h"
+#import "HYSelectView.h"
+#import "HYHYShipListTableViewCell.h"
+#import "HYMyAreaModel.h"
+
+@interface HYShipListViewController () {
+    UIButton *_selectBtn;
+}
+@property (weak, nonatomic) IBOutlet UITableView *tableView;
+@property (weak, nonatomic) IBOutlet UIView *leftView;
+@property (weak, nonatomic) IBOutlet UIButton *leftBtn;
+@property (weak, nonatomic) IBOutlet UILabel *leftLab;
+
+@property (nonatomic, copy) NSString *typeId;
+
+@property (nonatomic, strong) UIButton *selectBtn;
+@property (nonatomic, strong) HYSelectView *selectView;
+
+@property (nonatomic, assign) NSInteger page;//页数
+@property (nonatomic, assign) BOOL isFresh;//加载
+@property (nonatomic, strong) NSMutableArray *dataArr;
+@end
+
+@implementation HYShipListViewController
+- (IBAction)downList:(UIButton *)sender {
+    self.selectView.hidden = NO;
+    
+}
+- (void)initWithData
+{
+    NSArray *nameArr = @[@"全部站点",@"长江汇站点",@"友商监控点",@"电子围栏上水监控点",@"电子围栏下水监控点"];
+    self.leftLab.text = nameArr[0];
+    self.selectView.dataArr = [NSArray arrayWithArray:nameArr];
+}
+- (void)viewDidLoad {
+    [super viewDidLoad];
+
+    self.navigationItem.title = @"我的船舶";
+    /***************初始化数据***********/
+    _page = 1;
+    self.typeId = @"0";
+    _dataArr = [NSMutableArray arrayWithCapacity:0];
+    
+    [self initWithData];
+    self.tableView.tableFooterView = [UIView new];
+    
+    //添加地图和搜索按钮
+    [self addNavigationItemWithImageNames:@[@"hy_map_img",@"hy_search_img"] titles:@[@"地图",@"搜索"] textClolr:hexColor(323232) isLeft:NO target:self action:@selector(rightItemsClick:) tags:@[@"100",@"101"]];
+    
+    
+    WEAKSELF;
+    [HYPublicClass refreshWithHeader:self.tableView refreshingBlock:^{
+        weakSelf.page = 1;
+        weakSelf.isFresh = NO;
+//        [weakSelf myAreasRequestData];
+    }];
+    [HYPublicClass refreshWithFooter:self.tableView refreshingBlock:^{
+        weakSelf.page++;
+        weakSelf.isFresh = YES;
+//        [weakSelf myAreasRequestData];
+    }];
+}
+- (void)rightItemsClick:(UIButton *)btn
+{
+    if(btn.tag == 100) {
+        NSLog(@"地图");
+        
+    }else {
+        NSLog(@"搜索");
+        HYSearchShipViewController *vc = [[HYSearchShipViewController alloc] init];
+        [self.navigationController pushViewController:vc animated:YES];
+    }
+}
+#pragma mark - UITableViewDelegate
+- (NSInteger)tableView:(UITableView *)table numberOfRowsInSection:(NSInteger)section
+{
+    return 10;//_dataArr.count;
+}
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    return 1;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView estimatedHeightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    return 90;
+}
+- (UITableViewCell*)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    static NSString *cellid = @"listviewid";
+    HYHYShipListTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellid];
+    if (cell == nil) {
+        cell = [[[NSBundle mainBundle] loadNibNamed:@"HYHYShipListTableViewCell" owner:nil options:nil] lastObject];
+    }
+    cell.dataArr = @[@"将军百",@"十年",@"奶油过奶",@"奶油过奶油过",@"十年",@"奶油过奶油过奶油过奶油过",@"奶油过奶油过",@"奶油过奶油过"];
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    
+}
+#pragma mark - =========requestData========
+
+#pragma mark - =========懒加载========
+- (HYSelectView *)selectView
+{
+    if (!_selectView) {
+        _selectView = [[[NSBundle mainBundle] loadNibNamed:@"HYSelectView" owner:nil options:nil] lastObject];
+        _selectView.hidden = YES;
+        MJWeakSelf;
+        _selectView.selectBlock = ^(NSString *str, NSInteger index) {
+            weakSelf.selectView.hidden = YES;
+            weakSelf.leftLab.text = str;
+            weakSelf.typeId = [NSString stringWithFormat:@"%ld",index];
+        };
+        
+        [self.view addSubview:_selectView];
+        
+        [_selectView mas_makeConstraints:^(MASConstraintMaker *make) {
+            
+            make.edges.equalTo(weakSelf.view);
+        }];
+    }
+    
+    return _selectView;
+}
+
+@end

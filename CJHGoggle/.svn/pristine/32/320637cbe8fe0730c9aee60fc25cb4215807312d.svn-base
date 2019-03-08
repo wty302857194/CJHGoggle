@@ -1,0 +1,32 @@
+//
+//  HYMacroDefinition.h
+//  CJHGoggle
+//
+//  Created by 阿杰 on 2018/8/1.
+//  Copyright © 2018年 CJH. All rights reserved.
+//
+
+#ifndef HYMacroDefinition_h
+
+
+#define HYMacroDefinition_h
+
+//宏定义添加区域
+
+
+
+//极光推送key：
+#define JGPUSH_AppKey @"7683ad9f9d86631c58d7490f"
+//百度地图的key：
+#define BDMAP_AppKey @"zwCBvKb1bo3hULIhpEly6ES3qkNiVsG8"
+
+
+// 服务端公钥
+#define CJHServerPublickey @"MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA/59zF5btV9+j/z3uOM9FkTM8+pQbLq5vXKz5nFRkeiltykKudVUa6IpJFMGtkGmq7YjeFdvUyIAtCRlu6MoXnl18vZsvf8YTEliuLmGeVOTJWnLDcdUW2kbWTyMDBxb/9DWdV/T0G3Utms0VDX8k4GxPYuaUdHlmevndIY1LYjeCrY/XeC8Kdh7Vp6RvgaJPnHpPmq/hXU8v8DtL7hdXTaMSkwt6c7SjgFnABNWcszl9poQ8Gk+WruZJBp/HiSh+78TwHNiA4Zvb8aOjje51DxCmSOjyvdPjmGsXzDu9mqCXp8dYD4M3clWrsbCapwLaJqaijEzTMvMe53084e1+MwIDAQAB"
+
+#define DP_RSA_CLIENT_PRIVATE_KEY @"DP_RSA_CLIENT_PRIVATE_KEY"
+
+#define DP_RSA_CLIENT_PUBLIC_KEY @"DP_RSA_CLIENT_PUBLIC_KEY"
+
+
+#endif /* HYMacroDefinition_h */

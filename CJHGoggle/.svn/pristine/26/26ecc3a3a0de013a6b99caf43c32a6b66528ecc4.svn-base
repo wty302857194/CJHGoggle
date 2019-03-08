@@ -1,0 +1,343 @@
+//
+//  HYShipMapViewController.m
+//  CJHCompetitors
+//
+//  Created by 耿建峰 on 2017/9/25.
+//  Copyright © 2017年 gengjf. All rights reserved.
+//
+
+#import "HYShipMapViewController.h"
+
+#import <BaiduMapAPI_Map/BMKMapComponent.h>
+
+#import <BaiduMapAPI_Location/BMKLocationService.h>
+
+#import <BaiduMapAPI_Utils/BMKUtilsComponent.h>
+
+#import "HYShipsList.h"
+
+#import "HYShipInfo.h"
+
+#import "HYMapPointAnnotion.h"
+
+#import "HYAnnotationView.h"
+
+#import "HYCustomOverlay.h"
+
+#import "HYCustomOverlayView.h"
+
+#import "HYMonitorAlertView.h"
+
+#import "HYStationItemView.h"
+
+#import "HYStation.h"
+
+#import "HYShipDetailViewController.h"
+
+#import "HYShipTrailViewController.h"
+
+// 地图AIS数据刷新间隔
+#define AIS_LIST_REQUEST_INTERVAL 2*60.0
+
+@interface HYShipMapViewController () <BMKMapViewDelegate,
+BMKLocationServiceDelegate
+>
+
+@property (nonatomic, strong) IBOutlet BMKMapView *mapView;
+
+// 定位服务对象(专门用于定位)
+@property (nonatomic, strong) BMKLocationService *locationService;
+
+@property (nonatomic, strong) IBOutlet UIButton *button_normal;
+@property (nonatomic, strong) IBOutlet UIButton *button_satellite;
+
+@end
+
+@implementation HYShipMapViewController
+
+- (void)viewDidLoad {
+ 
+    [super viewDidLoad];
+    
+    self.mapView.delegate = self;
+    
+    self.mapView.rotateEnabled = NO;
+    
+    [self makeSubViews];
+    
+    // 兴隆洲服务区
+    BMKCoordinateRegion region;
+    region.center = CLLocationCoordinate2DMake(32.19039724509582, 119.03086213172625);
+    region.span.latitudeDelta  = 0.2;
+    region.span.longitudeDelta = 0.2;
+    self.mapView.region = region;
+    
+    // 卫星地图
+    self.mapView.mapType = BMKMapTypeSatellite;
+    
+    self.mapView.showsUserLocation = YES;//显示定位图层
+    
+    [self fetchShipsCoordinate];
+}
+
+- (void)makeSubViews {
+    
+    self.extendedLayoutIncludesOpaqueBars = NO;
+
+    if ([self respondsToSelector:@selector(setEdgesForExtendedLayout:)]) {
+        self.edgesForExtendedLayout = UIRectEdgeNone;
+    }
+    
+    // 创建定位服务对象
+    self.locationService = [[BMKLocationService alloc] init];
+    // 设置定位服务对象的代理
+    self.locationService.delegate = self;
+    // 设置再次定位的最小距离
+    self.locationService.distanceFilter = 10;
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    
+    [super viewWillAppear:animated];
+    
+    [self.mapView viewWillAppear];
+    self.mapView.delegate = self;
+    
+    self.locationService.delegate = self;
+}
+
+- (void)viewWillDisappear:(BOOL)animated {
+    
+    [super viewWillDisappear:animated];
+    
+    [self.mapView viewWillDisappear];
+    
+    self.mapView.delegate = nil;
+    
+    self.locationService.delegate = nil;
+}
+
+- (void)showShipOnMapView {
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        
+        [self.mapView removeAnnotations:self.mapView.annotations];
+        
+        CLLocationCoordinate2D coordinate_setting = CLLocationCoordinate2DMake(self.ship.latitude, self.ship.longitude);
+        
+        NSString *title = ![NSString dp_isEmptyString:self.ship.chName] ? self.ship.chName : (![NSString dp_isEmptyString:self.ship.shipName] ? self.ship.shipName : self.ship.mmsi);
+        
+        HYMapPointAnnotion *pointAnnotation = [[HYMapPointAnnotion alloc] init];
+        pointAnnotation.coordinate = coordinate_setting;
+        pointAnnotation.title = title;
+        pointAnnotation.ship = self.ship;
+        
+        [self.mapView addAnnotation:pointAnnotation];
+        
+        BMKCoordinateRegion region;
+        region.center = coordinate_setting;
+        region.span.latitudeDelta  = 0.2;
+        region.span.longitudeDelta = 0.2;
+        self.mapView.region = region;
+    });
+}
+
+#pragma mark - Action method
+
+- (IBAction)showCurrentLocation:(id)sender {
+    
+    [self.locationService startUserLocationService];
+    // 在地图上显示用户位置
+    self.mapView.showsUserLocation = YES;
+}
+
+- (IBAction)showNormal:(id)sender {
+    
+    // 标准地图
+    self.mapView.mapType = BMKMapTypeStandard;
+    
+    self.button_normal.selected = YES;
+    self.button_satellite.selected = NO;
+}
+
+- (IBAction)showSatellite:(id)sender {
+    
+    // 卫星地图
+    self.mapView.mapType = BMKMapTypeSatellite;
+    self.button_normal.selected = NO;
+    self.button_satellite.selected = YES;
+}
+
+#pragma mark - method
+
+// 根据anntation生成对应的View
+- (BMKAnnotationView *)mapView:(BMKMapView *)mapView viewForAnnotation:(id <BMKAnnotation>)annotation {
+    
+    if ([annotation isKindOfClass:[HYMapPointAnnotion class]]) {
+        // 船舶
+        HYMapPointAnnotion *ann = (HYMapPointAnnotion *)annotation;
+        
+        HYAnnotationView *annotationView = (HYAnnotationView *)[mapView dequeueReusableAnnotationViewWithIdentifier:@"HYAnnotationView"];
+        
+        if (annotationView == nil) {
+            
+            annotationView = [[HYAnnotationView alloc] initWithAnnotation:annotation reuseIdentifier:@"HYAnnotationView"];
+        }
+        
+        UIImage *image = [UIImage imageNamed:@"ship_default_right"];
+        
+        int course = @(ann.ship.course).intValue % 360;
+        
+        if(course >= 0 && course <= 180) {
+            
+            image = [UIImage imageNamed:@"ship_default_right"];
+        }
+        else if(course > 180 && course <= 360) {
+            
+            image = [UIImage imageNamed:@"ship_default_left"];
+        }
+
+        annotationView.image = image;
+        
+        annotationView.canShowCallout = NO;
+        
+        annotationView.title = ann.title;
+        
+        return annotationView;
+    }
+    else if ([annotation isKindOfClass:[BMKPointAnnotation class]]) {
+        //普通annotation
+        CLLocationCoordinate2D coordinate = annotation.coordinate;
+        NSString *annotationViewId = [NSString stringWithFormat:@"%f,%f", coordinate.latitude, coordinate.longitude];
+        BMKPinAnnotationView *annotationView = (BMKPinAnnotationView *)[mapView dequeueReusableAnnotationViewWithIdentifier:annotationViewId];
+        
+        if (annotationView == nil) {
+            
+            annotationView = [[BMKPinAnnotationView alloc] initWithAnnotation:annotation reuseIdentifier:annotationViewId];
+            // 设置可拖拽
+            annotationView.draggable = YES;
+            // 从天上掉下效果
+            annotationView.animatesDrop = YES;
+        }
+        
+        return annotationView;
+    }
+    return nil;
+}
+
+- (void)mapView:(BMKMapView *)mapView didSelectAnnotationView:(BMKAnnotationView *)view {
+    
+    if (!view) return;
+    
+    [self.mapView deselectAnnotation:view.annotation animated:YES];
+    
+    id <BMKAnnotation> annotation = view.annotation;
+    
+    if ([annotation isKindOfClass:[HYMapPointAnnotion class]]) {
+        // 船舶
+        HYMapPointAnnotion *ann = (HYMapPointAnnotion *)annotation;
+        
+        [self gotoShipDetailViewController:ann.ship];
+    }
+}
+
+#pragma mark - BMKLocationServiceDelegate methods
+
+- (void)didFailToLocateUserWithError:(NSError *)error {
+    
+    // 关闭定位服务
+    [self.locationService stopUserLocationService];
+    // 设置地图不显示用户位置
+    self.mapView.showsUserLocation = NO;
+}
+
+- (void)didUpdateBMKUserLocation:(BMKUserLocation *)userLocation {
+    
+    [self.mapView updateLocationData:userLocation];
+    
+    CLLocationCoordinate2D coordinate = userLocation.location.coordinate;
+    
+    // 兴隆洲服务区
+    BMKCoordinateRegion region;
+    region.center = coordinate;
+    region.span.latitudeDelta  = 0.5;
+    region.span.longitudeDelta = 0.5;
+    self.mapView.region = region;
+    
+    // 关闭定位服务
+    [self.locationService stopUserLocationService];
+}
+
+#pragma mark - 获取船舶位置数据
+
+- (void)fetchShipsCoordinate {
+    
+    if (!self.ship) return;
+    
+    NSString *url = @"/ais/ship";
+    
+    NSDictionary *params = @{
+                             @"token" : HYNONNil([HYManager sharedManager].currentUser.token),
+                             @"keyword" : HYNONNil(self.ship.mmsi),
+                             };
+    
+    WEAKSELF
+    
+    [HYHttpManager postRequestWithUrl:url params:params parserClass:[HYShipsList class] successBlock:^(id response) {
+        
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            
+            HYShipsList *list = response;
+            
+            if (list && list.data && list.data.count > 0) {
+                
+                weakSelf.ship = list.data[0];
+            }
+            
+            dispatch_async(dispatch_get_main_queue(), ^{
+                
+                NSString *title = ![NSString dp_isEmptyString:weakSelf.ship.chName] ? weakSelf.ship.chName : (![NSString dp_isEmptyString:weakSelf.ship.shipName] ? weakSelf.ship.shipName : weakSelf.ship.mmsi);
+                
+                weakSelf.title = title;
+                
+                [weakSelf showShipOnMapView];
+            });
+        });
+        
+    } failBlock:^(NSError *error) {
+        
+        [Global promptMessage:error.localizedDescription inView:weakSelf.view];
+    }];
+}
+
+#pragma mark - Action methods
+
+- (void)gotoShipDetailViewController:(HYShipInfo *)ship {
+    
+    if ([ship isV]) {
+        // 只有长江汇大V才显示船舶详情
+        HYShipDetailViewController *viewController = [[HYShipDetailViewController alloc] init];
+        viewController.ship = ship;
+        [self pushNewViewController:viewController];
+    }
+    else {
+        
+        HYShipTrailViewController *viewController = [[HYShipTrailViewController alloc] init];
+        viewController.ship = ship;
+        [self pushNewViewController:viewController];
+    }
+}
+
+#pragma mark - Properties
+
+#pragma mark -
+
+- (void)dealloc {
+ 
+    self.mapView.delegate = nil;
+    self.mapView = nil;
+    
+    self.locationService.delegate = nil;
+}
+
+@end

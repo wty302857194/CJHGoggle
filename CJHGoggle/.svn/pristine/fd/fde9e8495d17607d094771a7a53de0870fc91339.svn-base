@@ -1,0 +1,222 @@
+//
+//  HYStopShipViewController.m
+//  CJHGoggle
+//
+//  Created by 吴棒棒 on 2018/8/9.
+//  Copyright © 2018年 CJH. All rights reserved.
+//
+/**
+ *　　　　　　　 ┏┓       ┏┓+ +
+ *　　　　　　　┏┛┻━━━━━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　 ┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 █████━█████  ┃+
+ *　　　　　　　┃　　　　　　 ┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　 ┃ + +
+ *　　　　　　　┗━━┓　　　 ┏━┛
+ *               ┃　　  ┃
+ *　　　　　　　　　┃　　  ┃ + + + +
+ *　　　　　　　　　┃　　　┃　Code is far away from     bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　         神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　 ┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━━━┳┓┏┛ + + + +
+ *　　　　　　　　　 ┃┫┫　 ┃┫┫
+ *　　　　　　　　　 ┗┻┛　 ┗┻┛+ + + +
+ */
+
+#import "HYStopShipViewController.h"
+#import "HYStopShipTableViewCell.h"
+#import "HYLostShipTableViewCell.h"
+#import "HYLostShipModel.h"
+
+#define cellIdentifier @"listviewid"
+@interface HYStopShipViewController () <UITableViewDelegate,UITableViewDataSource>
+@property (weak, nonatomic) IBOutlet UITableView *tableView;
+@property (nonatomic,assign) NSInteger page;
+@property (nonatomic, assign) BOOL isFresh;//是否加载
+
+@property (nonatomic, strong) NSMutableArray *dataArr;
+@end
+
+@implementation HYStopShipViewController
+
+- (void)viewDidLoad {
+    
+    [super viewDidLoad];
+    
+    self.page = 1;
+    
+    WEAKSELF;
+    [HYPublicClass refreshWithHeader:self.tableView refreshingBlock:^{
+        weakSelf.page = 1;
+        weakSelf.isFresh = NO;
+        if ([self.cellString isEqualToString:@"HYStopShipTableViewCell"]) {
+            [self getMooredShipRequestData];
+        }else {
+            [self getLostShipRequestData];
+        }
+        
+    }];
+    
+    [HYPublicClass refreshWithFooter:self.tableView refreshingBlock:^{
+        weakSelf.page++;
+        weakSelf.isFresh = YES;
+        if ([self.cellString isEqualToString:@"HYStopShipTableViewCell"]) {
+            [self getMooredShipRequestData];
+        }else {
+            [self getLostShipRequestData];
+        }
+        
+    }];
+    
+    
+}
+
+#pragma mark - UITableViewDelegate
+
+- (NSInteger)tableView:(UITableView *)table numberOfRowsInSection:(NSInteger)section
+{
+    
+    return self.dataArr ? self.dataArr.count : 0;
+}
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    
+    return 1;
+}
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    
+    return 80;
+}
+
+- (UITableViewCell*)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    
+    static NSString *cellid = @"listviewid";
+    id messageCell = [tableView dequeueReusableCellWithIdentifier:cellid];
+    if (messageCell == nil) {
+        messageCell = [[[NSBundle mainBundle] loadNibNamed:self.cellString owner:nil options:nil] lastObject];
+    }
+    HYLostShipModel *model = nil;
+    if(indexPath.row < self.dataArr.count) {
+        model = self.dataArr[indexPath.row];
+    }
+
+    [messageCell configCellWithModel:model];
+    return messageCell;
+
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    
+}
+
+// 近期靠泊船舶
+- (void)getMooredShipRequestData {
+    
+    NSDictionary *dic = @{
+                          @"page":@(_page),
+                          @"size":@"20"
+                          };
+    WEAKSELF;
+    [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    [HYHTTPClient asynchronousPostRequest:@"myship/getRecentlyBberthing" parameters:dic successBlock:^(BOOL success, id data, NSString *msg) {
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+        
+        NSLog(@"data====%@",data);
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+        [self.tableView.mj_header endRefreshing];
+        [self.tableView.mj_footer endRefreshing];
+        if (success&&data) {
+            NSArray *arr = [HYLostShipModel mj_objectArrayWithKeyValuesArray:data[@"rows"]];
+            
+            if (weakSelf.isFresh) {
+                if (arr&&arr.count>0) {
+                    [weakSelf.dataArr addObjectsFromArray:arr];
+                    [weakSelf.tableView reloadData];
+                }else {
+                    [Global promptMessage:@"没有更多了" inView:weakSelf.view];
+                    [weakSelf.tableView.mj_footer endRefreshingWithNoMoreData];
+                    
+                }
+            }else {
+                [weakSelf.dataArr removeAllObjects];
+                if (arr&&arr.count>0) {
+                    [weakSelf.dataArr addObjectsFromArray:arr];
+                    [weakSelf.tableView reloadData];
+                }else {
+                    NSLog(@"加载空视图");
+                }
+            }
+        }else {
+            [Global promptMessage:msg inView:weakSelf.view];
+        }
+    } failureBlock:^(NSString *description) {
+        [Global promptMessage:description inView:self.view];
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+    }];
+}
+//myship/getLostShip
+// 流失的船舶
+- (void)getLostShipRequestData {
+    
+    NSDictionary *dic = @{
+                          @"page":@(_page),
+                          @"size":@"20"
+                          };
+    [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    
+    WEAKSELF
+    [HYHTTPClient asynchronousPostRequest:@"myship/getLostShip" parameters:dic successBlock:^(BOOL success, id data, NSString *msg) {
+        
+        NSLog(@"data====%@",data);
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+        [self.tableView.mj_header endRefreshing];
+        [self.tableView.mj_footer endRefreshing];
+        if (success&&data) {
+            NSArray *arr = [HYLostShipModel mj_objectArrayWithKeyValuesArray:data[@"rows"]];
+            
+            if (weakSelf.isFresh) {
+                if (arr&&arr.count>0) {
+                    [weakSelf.dataArr addObjectsFromArray:arr];
+                    [weakSelf.tableView reloadData];
+                }else {
+                    [Global promptMessage:@"没有更多了" inView:weakSelf.view];
+                    [weakSelf.tableView.mj_footer endRefreshingWithNoMoreData];
+                    
+                }
+            }else {
+                [weakSelf.dataArr removeAllObjects];
+                if (arr&&arr.count>0) {
+                    [weakSelf.dataArr addObjectsFromArray:arr];
+                    [weakSelf.tableView reloadData];
+                }else {
+                    NSLog(@"加载空视图");
+                }
+            }
+        }else {
+            [Global promptMessage:msg inView:weakSelf.view];
+        }
+        
+    } failureBlock:^(NSString *description) {
+        
+        [Global promptMessage:description inView:self.view];
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+    }];
+}
+
+#pragma mark - ===懒加载===
+- (NSMutableArray *)dataArr {
+    if (!_dataArr) {
+        _dataArr = [NSMutableArray arrayWithCapacity:0];
+    }
+    return _dataArr;
+}
+@end

@@ -1,0 +1,150 @@
+//
+//  HYStopShipViewController.m
+//  CJHGoggle
+//
+//  Created by 吴棒棒 on 2018/8/9.
+//  Copyright © 2018年 CJH. All rights reserved.
+//
+/**
+ *　　　　　　　 ┏┓       ┏┓+ +
+ *　　　　　　　┏┛┻━━━━━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　 ┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 █████━█████  ┃+
+ *　　　　　　　┃　　　　　　 ┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　 ┃ + +
+ *　　　　　　　┗━━┓　　　 ┏━┛
+ *               ┃　　  ┃
+ *　　　　　　　　　┃　　  ┃ + + + +
+ *　　　　　　　　　┃　　　┃　Code is far away from     bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　         神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　 ┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━━━┳┓┏┛ + + + +
+ *　　　　　　　　　 ┃┫┫　 ┃┫┫
+ *　　　　　　　　　 ┗┻┛　 ┗┻┛+ + + +
+ */
+
+#import "HYStopShipViewController.h"
+
+@interface HYStopShipViewController () <UITableViewDelegate,UITableViewDataSource>
+@property (weak, nonatomic) IBOutlet UITableView *tableView;
+@property (nonatomic,assign) NSInteger page;
+@property (nonatomic, strong) NSMutableArray *dataArr;
+@end
+
+@implementation HYStopShipViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view from its nib.
+    self.page = 1;
+    [self getUnassignedShipRequestData];
+}
+#pragma mark - UITableViewDelegate
+- (NSInteger)tableView:(UITableView *)table numberOfRowsInSection:(NSInteger)section
+{
+    return 10;//_dataArr.count;
+}
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    return 1;
+}
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    return 50;
+}
+//- (CGFloat)tableView:(UITableView *)tableView estimatedHeightForRowAtIndexPath:(NSIndexPath *)indexPath
+//{
+//    return 50;
+//}
+
+- (UITableViewCell*)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    
+    
+    static NSString *cellid = @"listviewid";
+    id cell = [tableView dequeueReusableCellWithIdentifier:cellid];
+    if (cell == nil) {
+        cell = [[[NSBundle mainBundle] loadNibNamed:self.cellString owner:nil options:nil] lastObject];;
+    }
+    
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    
+}
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+#pragma mark - myChargeShip
+- (void)myChargeShipRequestData
+{
+    NSDictionary *dic = @{
+                          @"keyword":@"",
+                          @"page":@(self.page)
+                          };
+    [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    [HYHTTPClient asynchronousPostRequest:@"myChargeShip" parameters:dic successBlock:^(BOOL success, id data, NSString *msg) {
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+        
+        if (success&&data) {
+            
+        }else {
+            [Global promptMessage:msg inView:self.view];
+        }
+    } failureBlock:^(NSString *description) {
+        [Global promptMessage:description inView:self.view];
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+    }];
+}
+
+- (void)getUnassignedShipRequestData
+{
+    NSDictionary *dic = @{
+                          @"page":@"",
+                          @"size":@"20"
+                          };
+    [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    [HYHTTPClient asynchronousPostRequest:@"myship/getUnassignedShip" parameters:dic successBlock:^(BOOL success, id data, NSString *msg) {
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+        
+        if (success&&data) {
+            
+        }else {
+            [Global promptMessage:msg inView:self.view];
+        }
+    } failureBlock:^(NSString *description) {
+        [Global promptMessage:description inView:self.view];
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+    }];
+}
+//myship/getLostShip
+- (void)getLostShipRequestData
+{
+    NSDictionary *dic = @{
+                          @"page":@"",
+                          @"size":@"20"
+                          };
+    [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    [HYHTTPClient asynchronousPostRequest:@"myship/getLostShip" parameters:dic successBlock:^(BOOL success, id data, NSString *msg) {
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+        
+        if (success&&data) {
+            
+        }else {
+            [Global promptMessage:msg inView:self.view];
+        }
+    } failureBlock:^(NSString *description) {
+        [Global promptMessage:description inView:self.view];
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+    }];
+}
+@end

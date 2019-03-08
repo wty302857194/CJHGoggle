@@ -1,0 +1,146 @@
+ //
+//  HYShipListModel.h
+//  CJHGoggle
+//
+//  Created by 吴棒棒 on 2018/8/16.
+//  Copyright © 2018年 CJH. All rights reserved.
+//
+/**
+ *　　　　　　　 ┏┓       ┏┓+ +
+ *　　　　　　　┏┛┻━━━━━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　 ┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 █████━█████  ┃+
+ *　　　　　　　┃　　　　　　 ┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　 ┃ + +
+ *　　　　　　　┗━━┓　　　 ┏━┛
+ *               ┃　　  ┃
+ *　　　　　　　　　┃　　  ┃ + + + +
+ *　　　　　　　　　┃　　　┃　Code is far away from     bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　         神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　 ┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━━━┳┓┏┛ + + + +
+ *　　　　　　　　　 ┃┫┫　 ┃┫┫
+ *　　　　　　　　　 ┗┻┛　 ┗┻┛+ + + +
+ */
+
+#import "HYBaseModel.h"
+/*
+ {
+ "mmsi": "413816363",
+ "utc": "2018-08-09 10:18:28",
+ "longitude": "117.997475",
+ "latitude": "31.12414",
+ "course": 168.7,
+ "trueheading": "-0.1",
+ "speed": "5.6",
+ "status": "",
+ "vdesc": "",
+ "imo": "",
+ "callSign": "",
+ "shipName": "",
+ "cargoType": "",
+ "length": "0",
+ "width": "0",
+ "posFix": "",
+ "eta": "",
+ "draft": "0",
+ "dest": "",
+ "classType": "",
+ "chName": "",
+ "exceed2hour": "",
+ "cjhState": 2,
+ "labelList": [{
+ "id": 6,
+ "userId": 4,
+ "labelId": 1,
+ "shipId": 2,
+ "name": "大客户",
+ "mmsi": "413816363"
+ }]
+ },
+
+ 
+ 
+ 
+ 
+ {
+ callSign = "";
+ cargoType = "";
+ chName = "";
+ cjhState = 2;
+ classType = "";
+ course = "116.7";
+ dest = "";
+ draft = 0;
+ eta = "";
+ exceed2hour = "";
+ imo = "";
+ labelList =
+ ({
+ id = 53;
+ labelId = 1;
+ mmsi = 413816363;
+ name = "\U661f\U6807\U5ba2\U6237";
+ shipId = 38077;
+ userId = 1;
+ },);
+ 
+ latitude = "31.345964";
+ length = 0;
+ longitude = "121.523796";
+ mmsi = 413816363;
+ moortime = "";
+ posFix = "";
+ shipName = "";
+ sitename = "";
+ speed = "2.7";
+ status = "";
+ trueheading = "-0.1";
+ utc = "2018-08-16 19:12:38";
+ vdesc = "";
+ width = 0;
+ }
+ */
+@interface HYShipListModel : HYBaseModel
+@property (nonatomic, copy) NSString *mmsi;
+@property (nonatomic, copy) NSString *utc;
+@property (nonatomic, copy) NSString *longitude;
+@property (nonatomic, copy) NSString *latitude;
+@property (nonatomic, copy) NSString *course;
+@property (nonatomic, copy) NSString *trueheading;
+@property (nonatomic, copy) NSString *speed;
+@property (nonatomic, copy) NSString *status;
+@property (nonatomic, copy) NSString *vdesc;
+@property (nonatomic, copy) NSString *imo;
+@property (nonatomic, copy) NSString *callSign;
+@property (nonatomic, copy) NSString *shipName;
+@property (nonatomic, copy) NSString *sitename;
+
+@property (nonatomic, copy) NSString *cargoType;
+@property (nonatomic, copy) NSString *length;
+@property (nonatomic, copy) NSString *width;
+@property (nonatomic, copy) NSString *posFix;
+@property (nonatomic, copy) NSString *eta;
+@property (nonatomic, copy) NSString *draft;
+@property (nonatomic, copy) NSString *classType;
+@property (nonatomic, copy) NSString *chName;
+@property (nonatomic, copy) NSString *exceed2hour;
+@property (nonatomic, copy) NSString *cjhState;
+@property (nonatomic, copy) NSArray *labelList;
+@end
+
+@interface HYLabelListModel : HYBaseModel
+@property (nonatomic, copy) NSString *ID;
+@property (nonatomic, copy) NSString *userId;
+@property (nonatomic, copy) NSString *labelId;
+@property (nonatomic, copy) NSString *shipId;
+@property (nonatomic, copy) NSString *name;
+@property (nonatomic, copy) NSString *mmsi;
+
+@end

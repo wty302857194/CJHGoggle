@@ -1,0 +1,183 @@
+//
+//  HYMoorShipListViewController.m
+//  CJHGoggle
+
+
+#import "HYMoorShipListViewController.h"
+#import "HYMoorShipModel.h"
+#import "HYMoorShipList.h"
+#import "HYMoorShipInfo.h"
+#import "HYAreaMoorShipTableViewCell.h"
+#import "HYShipMapViewController.h"
+#import "HYShipInfo.h"
+
+@interface HYMoorShipListViewController ()
+
+@end
+
+@implementation HYMoorShipListViewController
+
+- (void)viewDidLoad {
+    
+    [super viewDidLoad];
+    
+    self.view.backgroundColor = [UIColor whiteColor];
+    
+    self.extendedLayoutIncludesOpaqueBars = NO;
+    
+    if ([self respondsToSelector:@selector(setEdgesForExtendedLayout:)]) {
+        self.edgesForExtendedLayout = UIRectEdgeNone;
+    }
+    
+    [self makeSubViews];
+    
+    [self startPullDownRefreshing];
+}
+
+- (void)makeSubViews {
+    
+    [self addHeaderPullDownRefreshControl];
+    
+    if (MOORQUERYTYPE_TOTAL == self.query_type) {
+        
+        self.title = @"靠泊总数";
+    }
+    else if (MOORQUERYTYPE_V == self.query_type) {
+        
+        self.title = @"靠泊大V";
+    }
+    else if (MOORQUERYTYPE_P == self.query_type) {
+        
+        self.title = @"潜在客户";
+    }
+}
+
+// 根据类型区分请求url
+- (NSString *)requestUrl {
+    
+    NSString *url = nil;
+    
+    if (self.moor_type == MOORSHIPTYPE_CJH_MOOR) {
+        // 长江汇站点靠泊
+        url = @"/area/getCjhSiteMoor";
+    }
+    else if (self.moor_type == MOORSHIPTYPE_MOOR) {
+        // 友商站点靠泊
+        url = @"/area/getFriendSite";
+    }
+    
+    return url;
+}
+
+// 加载数据源
+- (void)loadDataSource {
+    
+    if (self.requestCurrentPage == 0) {
+        
+        [self.dataSource removeAllObjects];
+        [self.tableView reloadData];
+    }
+    
+    NSString *url = [self requestUrl];
+    
+    if ([NSString dp_isEmptyString:url]) {
+        
+        [self endLoadMoreRefreshing];
+        [self endPullDownRefreshing];
+        
+        return;
+    }
+    
+    NSDictionary *params = @{
+                             @"token" : HYNONNil([HYManager sharedManager].currentUser.token),
+                             @"cid" : HYNONNil(self.cid),
+                             @"startdate" : HYNONNil(self.startdate),
+                             @"enddate" : HYNONNil(self.enddate),
+                             @"type" :@(self.query_type + 1),
+                             @"page" : @(self.requestCurrentPage + 1),
+                             @"size" : @(self.requestLimitPePage),
+                             };
+    
+    WEAKSELF
+    
+    [HYHttpManager postRequestWithUrl:url params:params parserClass:[HYMoorShipList class] successBlock:^(id response) {
+        [weakSelf endLoadMoreRefreshing];
+        [weakSelf endPullDownRefreshing];
+        
+        HYMoorShipList *list = response;
+        
+        if(list && list.rows && list.rows.count > 0) {
+            
+            weakSelf.requestCurrentPage ++;
+            
+            [weakSelf.dataSource addObjectsFromArray:list.rows];
+        }
+        
+        if (list && list.hasnext) {
+            
+            [weakSelf addFooterLoadMoreRefreshControl];
+        }
+        else {
+            
+            [weakSelf removeFooterLoadMoreRefreshControl];
+        }
+        
+        [weakSelf.tableView reloadData];
+        
+    } failBlock:^(NSError *error) {
+        
+        weakSelf.requestCurrentPage --;
+        [weakSelf endLoadMoreRefreshing];
+        [weakSelf endPullDownRefreshing];
+    }];
+}
+
+#pragma mark - UITableViewDelegate & UITableViewDataSource
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
+    
+    return 95;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"UITableViewCell"];
+    
+    if(!cell) {
+        
+        cell = [[HYAreaMoorShipTableViewCell alloc] init];
+        
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    }
+    
+    [self setUpCell:(HYAreaMoorShipTableViewCell *)cell indexPath:indexPath];
+    
+    return cell;
+}
+
+// 配置cell数据
+- (void)setUpCell:(HYAreaMoorShipTableViewCell *)cell indexPath:(NSIndexPath *)indexPath {
+    
+    HYMoorShipInfo *info = [self.dataSource objectAtIndex:indexPath.row];
+    
+    [cell bindWithModel:info];
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    
+    HYMoorShipInfo *info = [self.dataSource objectAtIndex:indexPath.row];
+    
+    HYShipInfo *ship = [[HYShipInfo alloc] init];
+    ship.mmsi = info.mmsi;
+    ship.shipName = info.shipname;
+    
+    NSString *title = ![NSString dp_isEmptyString:info.shipname] ? info.shipname : info.mmsi;
+    
+    HYShipMapViewController *viewController = [[HYShipMapViewController alloc] init];
+    viewController.ship = ship;
+    viewController.title = title;
+    [self pushNewViewController:viewController];
+}
+@end

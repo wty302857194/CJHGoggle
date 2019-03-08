@@ -1,0 +1,185 @@
+//
+//  HYMyShipViewController.m
+//  CJHGoggle
+//
+//  Created by 吴棒棒 on 2018/8/8.
+//  Copyright © 2018年 CJH. All rights reserved.
+//
+/**
+ *　　　　　　　 ┏┓       ┏┓+ +
+ *　　　　　　　┏┛┻━━━━━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　 ┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 █████━█████  ┃+
+ *　　　　　　　┃　　　　　　 ┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　 ┃ + +
+ *　　　　　　　┗━━┓　　　 ┏━┛
+ *               ┃　　  ┃
+ *　　　　　　　　　┃　　  ┃ + + + +
+ *　　　　　　　　　┃　　　┃　Code is far away from     bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　         神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　 ┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━━━┳┓┏┛ + + + +
+ *　　　　　　　　　 ┃┫┫　 ┃┫┫
+ *　　　　　　　　　 ┗┻┛　 ┗┻┛+ + + +
+ */
+
+#import "HYMyShipViewController.h"
+#import "HYStopShipViewController.h"
+
+@interface HYMyShipViewController ()<UITableViewDelegate,UITableViewDataSource>
+@property (weak, nonatomic) IBOutlet UITableView *tableView;
+@property (nonatomic, strong) NSMutableArray *dataArr;
+
+@end
+
+@implementation HYMyShipViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    self.navigationItem.title = @"我的船舶";
+    self.tableView.tableFooterView = [[UIView alloc] initWithFrame:CGRectZero];
+    [self initTableFooterView];
+    
+    [self getMyShipQtyRequestData];
+}
+#pragma mark - FooterView
+- (void)initTableFooterView
+{
+    UIView *footerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, kScreenWidth, 200)];
+    self.tableView.tableFooterView = footerView;
+    
+    UIView *lineView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, kScreenWidth, 10)];
+    lineView.backgroundColor = hexColor(f4f5f6);
+    [footerView addSubview:lineView];
+    
+    UILabel *titleLab = [UILabel labelWithTitle:@"我的标签船舶：" color:hexColor(323232) fontSize:15 alignment:NSTextAlignmentLeft];
+    [footerView addSubview:titleLab];
+    [titleLab mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.mas_equalTo(10);
+        make.top.equalTo(lineView.mas_bottom).offset(10);
+    }];
+    
+    UIView *btnBackView = [[UIView alloc] init];
+    [footerView addSubview:btnBackView];
+    [btnBackView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(titleLab.mas_bottom).offset(10);
+        make.left.right.bottom.mas_equalTo(0);
+    }];
+    
+    NSArray *btnArr = @[@"重要客户",@"重要客户",@"重要客户",@"重要客户123",@"重要客户3"];
+    NSString *numStr = @"12313";
+    
+    CGFloat marginX = 10.f;  //按钮距离左边和右边的距离
+    CGFloat marginY = 10.f;  //距离上下边缘距离
+
+    CGFloat gapX = 30.f;    //左右按钮之间的距离
+    CGFloat gapY = 10.f;    //上下按钮之间的距离
+    NSInteger col = 2;    //这里只布局2列
+
+    CGFloat y_height = 40.f;
+    CGFloat w_width = (kScreenWidth-marginX-marginX-gapX)/col*1.f;
+    
+    
+    for (int i = 0; i<btnArr.count; i++) {
+        
+        UIButton *btn = [UIButton buttonWithTitle:[NSString stringWithFormat:@"%@   %@",btnArr[i],numStr] titleColor:hexColor(323232) font:[UIFont systemFontOfSize:15] imageName:nil target:self action:@selector(goMyTags:)];
+        btn.frame = CGRectMake(marginX + (w_width + gapX)*(i%col), marginY+(y_height + gapY)*(i/col), w_width, y_height);
+        btn.tag = 100 +i;
+        btn.borderColor = hexColor(1dac5e);
+        btn.borderWidth = 0.5;
+        NSMutableAttributedString *aString = [[NSMutableAttributedString alloc]initWithString:[NSString stringWithFormat:@"%@   %@",btnArr[i],numStr]];
+        [aString addAttribute:NSForegroundColorAttributeName value:hexColor(1dac5e) range:NSMakeRange(aString.length - numStr.length,numStr.length)];
+        btn.titleLabel.attributedText= aString;
+        [btnBackView addSubview:btn];
+        
+    }
+}
+- (void)goMyTags:(UIButton *)btn
+{
+    
+}
+#pragma mark - UITableViewDelegate
+- (NSInteger)tableView:(UITableView *)table numberOfRowsInSection:(NSInteger)section
+{
+    return self.dataArr.count;
+}
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    return 1;
+}
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    return 50;
+}
+
+- (UITableViewCell*)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    static NSString *cellid=@"listviewid";
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellid];
+    if (cell == nil) {
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:cellid];
+    }
+    cell.imageView.image = [UIImage imageNamed:@"hy_bigV_img"];
+    cell.textLabel.text = self.dataArr[indexPath.row];
+    cell.detailTextLabel.text = @"123123";
+    return cell;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    HYStopShipViewController *vc = [[HYStopShipViewController alloc] init];
+    switch (indexPath.row) {
+        case 0:
+        {
+            vc.cellString = @"HYStopShipTableViewCell";
+        }
+            break;
+        case 1:
+        {
+            vc.cellString = @"HYLostShipTableViewCell";
+        }
+            break;
+        default:
+            break;
+    }
+    
+    [self.navigationController pushViewController:vc animated:YES];
+}
+
+#pragma mark - 请求
+- (void)getMyShipQtyRequestData
+{
+    [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    [HYHTTPClient asynchronousPostRequest:@"myship/getMyShipQty" parameters:nil successBlock:^(BOOL success, id data, NSString *msg) {
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+        
+        if (success&&data) {
+            
+        }else {
+            [Global promptMessage:msg inView:self.view];
+        }
+    } failureBlock:^(NSString *description) {
+        [Global promptMessage:description inView:self.view];
+        [MBProgressHUD hideHUDForView:self.view animated:YES];
+    }];
+}
+- (NSMutableArray *)dataArr {
+    if (!_dataArr) {
+        _dataArr = [NSMutableArray arrayWithObjects:@"重要客户",@"重要客户",@"重要客户",@"重要客户",@"重要客户",@"重要客户", nil];
+    }
+    return _dataArr;
+}
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+
+@end

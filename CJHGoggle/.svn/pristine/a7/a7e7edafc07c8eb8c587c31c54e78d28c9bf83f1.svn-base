@@ -1,0 +1,291 @@
+//
+//  HYImportantClientViewController.m
+//  CJHGoggle
+//
+//  Created by 吴棒棒 on 2018/8/8.
+//  Copyright © 2018年 CJH. All rights reserved.
+//
+/**
+ *　　　　　　　 ┏┓       ┏┓+ +
+ *　　　　　　　┏┛┻━━━━━━━┛┻┓ + +
+ *　　　　　　　┃　　　　　　 ┃
+ *　　　　　　　┃　　　━　　　┃ ++ + + +
+ *　　　　　　 █████━█████  ┃+
+ *　　　　　　　┃　　　　　　 ┃ +
+ *　　　　　　　┃　　　┻　　　┃
+ *　　　　　　　┃　　　　　　 ┃ + +
+ *　　　　　　　┗━━┓　　　 ┏━┛
+ *               ┃　　  ┃
+ *　　　　　　　　　┃　　  ┃ + + + +
+ *　　　　　　　　　┃　　　┃　Code is far away from     bug with the animal protecting
+ *　　　　　　　　　┃　　　┃ + 　　　　         神兽保佑,代码无bug
+ *　　　　　　　　　┃　　　┃
+ *　　　　　　　　　┃　　　┃　　+
+ *　　　　　　　　　┃　 　 ┗━━━┓ + +
+ *　　　　　　　　　┃ 　　　　　┣┓
+ *　　　　　　　　　┃ 　　　　　┏┛
+ *　　　　　　　　　┗┓┓┏━━━┳┓┏┛ + + + +
+ *　　　　　　　　　 ┃┫┫　 ┃┫┫
+ *　　　　　　　　　 ┗┻┛　 ┗┻┛+ + + +
+ */
+
+#import "HYImportantClientViewController.h"
+#import "HYMyTagsModel.h"
+#import "HYShipInfo.h"
+#import "HYShipMapViewController.h"
+
+@interface HYImportantClientViewController () <UITableViewDelegate,UITableViewDataSource>
+{
+    UIButton *rightBtn;
+}
+@property (weak, nonatomic) IBOutlet NSLayoutConstraint *deleteHeightLayout;
+@property (weak, nonatomic) IBOutlet UITableView *tableView;
+
+@property (nonatomic, strong) NSMutableArray *dataArr;
+
+/**
+ 选中的数组
+ */
+@property (nonatomic, strong) NSMutableArray *sealctDataArr;//客户的唯一标识
+@end
+
+@implementation HYImportantClientViewController
+- (IBAction)delete:(UIButton *)sender {
+    
+    MJWeakSelf;
+    ListSelectView *select_view = [[ListSelectView alloc] initWithFrame:self.view.bounds];
+    select_view.choose_type = ONLYTEXTTYPE;
+    select_view.isShowCancelBtn = YES;
+    select_view.isShowSureBtn = YES;
+    select_view.isShowTitle = YES;
+    select_view.sureBtn_title_color = hexColor(ff4e00);
+    select_view.content_text = @"\n删除后，该无法查看该标签下的船舶\n";
+    select_view.sureBtn_title = @"确认";
+    select_view.cancelBtn_title = @"取消";
+    select_view.sureBtn_title_color = hexColor(ff4e00);
+    select_view.lab_content.textAlignment = NSTextAlignmentCenter;
+    select_view.contentTextFount = 14;
+    select_view.title_height = 50;
+    [select_view addTitleArray:nil andTitleString:@"确认删除" animated:YES completionHandler:^(NSString * _Nullable string, NSInteger index) {
+        
+    } withSureButtonBlock:^{
+        NSLog(@"sure btn");
+        
+        [weakSelf deleteShipInLabelRequuestData];
+        
+    }];
+    [self.view addSubview:select_view];
+    
+    
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    self.tableView.tableFooterView = [[UIView alloc] initWithFrame:CGRectZero];
+    
+    rightBtn = [UIButton buttonWithTitle:@"编辑" titleColor:hexColor(323232) font:[UIFont systemFontOfSize:15] imageName:@"" target:self action:@selector(editing)];
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithCustomView:rightBtn];
+    
+    [HYPublicClass refreshWithHeader:self.tableView refreshingBlock:^{
+        
+        [self getlabelCorrespondShipsRequestData];
+    }];
+}
+- (void)editing
+{
+    [self.tableView setEditing:!self.tableView.editing animated:YES];
+    
+    if (self.tableView.isEditing) {
+        [rightBtn setTitle:@"取消" forState:UIControlStateNormal];
+        _deleteHeightLayout.constant = 40;
+    }else {
+        [rightBtn setTitle:@"编辑" forState:UIControlStateNormal];
+        _deleteHeightLayout.constant = 0;
+    }
+    
+}
+#pragma mark - UITableViewDelegate
+- (NSInteger)tableView:(UITableView *)table numberOfRowsInSection:(NSInteger)section
+{
+    return self.dataArr.count;
+}
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    return 1;
+}
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    return 80;
+}
+
+- (UITableViewCell*)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    static NSString *cellid=@"listviewid";
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellid];
+    if (cell == nil) {
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellid];
+        cell.textLabel.textColor = hexColor(323232);
+    }
+    HYImportantClientModel *model = self.dataArr[indexPath.row];
+    
+    UIImage *image = [UIImage imageNamed:@"ship_default_right"];
+    
+    if (model.cjhState == 1) {
+        
+        image = [UIImage imageNamed:@"cjh_p_right"];
+    }
+    else if (model.cjhState == 2) {
+        
+        image = [UIImage imageNamed:@"cjh_v_right"];
+    }
+    
+    cell.imageView.image = image;
+    
+    CGSize itemSize = CGSizeMake(40, 35);
+    UIGraphicsBeginImageContextWithOptions(itemSize, NO, UIScreen.mainScreen.scale);
+    CGRect imageRect = CGRectMake(0.0, 0.0, itemSize.width, itemSize.height);
+    [cell.imageView.image drawInRect:imageRect];
+    cell.imageView.image = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    
+    cell.textLabel.text = model.shipName?:@"";
+    return cell;
+}
+
+-(UITableViewCellEditingStyle)tableView:(UITableView *)tableView editingStyleForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    if (tableView.editing) {
+        
+        return UITableViewCellEditingStyleDelete|UITableViewCellEditingStyleInsert;
+    }
+    
+    return UITableViewCellEditingStyleDelete;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    HYImportantClientModel *model = self.dataArr[indexPath.row];
+    
+    if (!self.tableView.isEditing) {
+        
+        [tableView deselectRowAtIndexPath:indexPath animated:YES];
+        
+        HYShipInfo *ship = [[HYShipInfo alloc] init];
+        ship.mmsi = model.mmsi;
+        ship.shipName = model.shipName;
+
+        NSString *title = ![NSString dp_isEmptyString:model.shipName] ? model.shipName : model.mmsi;
+
+        HYShipMapViewController *viewController = [[HYShipMapViewController alloc] init];
+        viewController.ship = ship;
+        viewController.title = title;
+        [self pushNewViewController:viewController];
+    }
+    else {
+        
+        [self.sealctDataArr addObject:model.ID?:@""];
+    }
+}
+- (void)tableView:(UITableView *)tableView didDeselectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    HYImportantClientModel *model = self.dataArr[indexPath.row];
+    
+    [self.sealctDataArr removeObject:model.ID?:@""];
+}
+
+- (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath {
+    
+    if (editingStyle == UITableViewCellEditingStyleDelete) {
+        
+        HYImportantClientModel *model = self.dataArr[indexPath.row];
+        
+        [self.sealctDataArr addObject:model.ID?:@""];
+        
+        [self deleteShipInLabelRequuestData];
+    }
+}
+
+- (NSMutableArray *)dataArr {
+    if (!_dataArr) {
+        _dataArr = [NSMutableArray arrayWithCapacity:0];
+    }
+    return _dataArr;
+}
+- (NSMutableArray *)sealctDataArr {
+    if (!_sealctDataArr) {
+        _sealctDataArr = [NSMutableArray arrayWithCapacity:0];
+    }
+    return _sealctDataArr;
+}
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+#pragma mark - 请求
+
+- (void)getlabelCorrespondShipsRequestData
+{
+    NSDictionary *dic = @{
+                          @"labelid":self.tagsId?:@""
+                          };
+    MJWeakSelf;
+    [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    [HYHTTPClient asynchronousPostRequest:@"label/labelCorrespondShips" parameters:dic successBlock:^(BOOL success, id data, NSString *msg) {
+        [MBProgressHUD hideHUDForView:weakSelf.view animated:YES];
+        
+        [weakSelf.tableView.mj_header endRefreshing];
+        if (success&&data) {
+            weakSelf.dataArr = [HYImportantClientModel mj_objectArrayWithKeyValuesArray:data[@"rows"]];
+            weakSelf.editing = NO;
+            [weakSelf.tableView reloadData];
+        }else {
+            [Global promptMessage:msg inView:weakSelf.view];
+        }
+    } failureBlock:^(NSString *description) {
+        [weakSelf.tableView.mj_header endRefreshing];
+        [Global promptMessage:description inView:weakSelf.view];
+        [MBProgressHUD hideHUDForView:weakSelf.view animated:YES];
+    }];
+}
+
+- (void)deleteShipInLabelRequuestData {
+    
+    if (!self.sealctDataArr || self.sealctDataArr.count == 0) {
+        
+        [Global promptMessage:@"请选择要删除的船舶" inView:self.view];
+        return;
+    }
+    
+    __block NSString *idsStr = @"";
+    [self.sealctDataArr enumerateObjectsUsingBlock:^(id  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        if (idx > 0) {
+            idsStr = [idsStr stringByAppendingString:[NSString stringWithFormat:@",%@",obj]];
+        }else {
+            idsStr = obj;
+        }
+    }];
+    NSLog(@"%@",idsStr);
+    NSDictionary *dic = @{
+                          @"ids":idsStr
+                          };
+    [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    WEAKSELF;
+    [HYHTTPClient asynchronousPostRequest:@"label/deleteShipInLabel" parameters:dic successBlock:^(BOOL success, id data, NSString *msg) {
+        
+        [MBProgressHUD hideHUDForView:weakSelf.view animated:YES];
+        
+        if (success&&data) {
+            weakSelf.deleteHeightLayout.constant = 0;
+            [weakSelf performSelector:@selector(getlabelCorrespondShipsRequestData) withObject:nil afterDelay:0.5];
+            [Global promptMessage:msg inView:weakSelf.view];
+        }else {
+            [Global promptMessage:msg inView:weakSelf.view];
+        }
+    } failureBlock:^(NSString *description) {
+        [Global promptMessage:description inView:weakSelf.view];
+        [MBProgressHUD hideHUDForView:weakSelf.view animated:YES];
+    }];
+}
+@end

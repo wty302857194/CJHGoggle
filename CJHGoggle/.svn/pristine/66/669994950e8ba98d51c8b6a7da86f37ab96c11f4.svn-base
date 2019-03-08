@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="14113" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
+    <device id="retina4_7" orientation="portrait">
+        <adaptation id="fullscreen"/>
+    </device>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="14088"/>
+        <capability name="Aspect ratio constraints" minToolsVersion="5.1"/>
+        <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner"/>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <tableViewCell contentMode="scaleToFill" selectionStyle="none" accessoryType="disclosureIndicator" indentationWidth="10" reuseIdentifier="listviewid" rowHeight="93" id="KGk-i7-Jjw" customClass="HYHYShipListTableViewCell">
+            <rect key="frame" x="0.0" y="0.0" width="325" height="93"/>
+            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+            <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" tableViewCell="KGk-i7-Jjw" id="H2p-sc-9uM">
+                <rect key="frame" x="0.0" y="0.0" width="291" height="92.5"/>
+                <autoresizingMask key="autoresizingMask"/>
+                <subviews>
+                    <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="hy_importantClient_img" translatesAutoresizingMaskIntoConstraints="NO" id="EF1-7o-VuF">
+                        <rect key="frame" x="10" y="15" width="35" height="35"/>
+                        <constraints>
+                            <constraint firstAttribute="height" constant="35" id="Wsh-fe-Ldr"/>
+                            <constraint firstAttribute="width" secondItem="EF1-7o-VuF" secondAttribute="height" multiplier="1:1" id="nWu-E7-LmK"/>
+                        </constraints>
+                    </imageView>
+                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="【兆基99】" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="ErN-av-81C">
+                        <rect key="frame" x="50" y="10" width="75" height="17"/>
+                        <constraints>
+                            <constraint firstAttribute="width" constant="75" id="UHB-Nh-7Na"/>
+                        </constraints>
+                        <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                        <color key="textColor" red="0.1960784314" green="0.1960784314" blue="0.1960784314" alpha="1" colorSpace="calibratedRGB"/>
+                        <nil key="highlightedColor"/>
+                    </label>
+                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="最近靠泊：兴隆洲" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="7ke-wn-iUh">
+                        <rect key="frame" x="50" y="65.5" width="114.5" height="17"/>
+                        <constraints>
+                            <constraint firstAttribute="height" constant="17" id="zl7-ag-XYW"/>
+                        </constraints>
+                        <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                        <color key="textColor" red="0.50196078430000002" green="0.50196078430000002" blue="0.50196078430000002" alpha="1" colorSpace="calibratedRGB"/>
+                        <nil key="highlightedColor"/>
+                    </label>
+                    <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="NhV-rH-oTT" customClass="LXTagsView">
+                        <rect key="frame" x="130.5" y="10" width="150.5" height="40"/>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                        <constraints>
+                            <constraint firstAttribute="height" constant="40" id="VRV-xn-AjI"/>
+                        </constraints>
+                    </view>
+                </subviews>
+                <constraints>
+                    <constraint firstItem="EF1-7o-VuF" firstAttribute="top" secondItem="H2p-sc-9uM" secondAttribute="top" constant="15" id="3uf-ZC-05W"/>
+                    <constraint firstItem="ErN-av-81C" firstAttribute="top" secondItem="H2p-sc-9uM" secondAttribute="top" constant="10" id="C2d-XS-19s"/>
+                    <constraint firstItem="7ke-wn-iUh" firstAttribute="leading" secondItem="ErN-av-81C" secondAttribute="leading" id="DVh-dl-CIA"/>
+                    <constraint firstAttribute="trailing" secondItem="NhV-rH-oTT" secondAttribute="trailing" constant="10" id="e42-fe-fYc"/>
+                    <constraint firstItem="NhV-rH-oTT" firstAttribute="leading" secondItem="ErN-av-81C" secondAttribute="trailing" constant="5" id="eVg-43-v5A"/>
+                    <constraint firstAttribute="bottom" secondItem="7ke-wn-iUh" secondAttribute="bottom" constant="10" id="jax-ar-6NX"/>
+                    <constraint firstItem="ErN-av-81C" firstAttribute="leading" secondItem="EF1-7o-VuF" secondAttribute="trailing" constant="5" id="l4w-D7-5gr"/>
+                    <constraint firstItem="EF1-7o-VuF" firstAttribute="leading" secondItem="H2p-sc-9uM" secondAttribute="leading" constant="10" id="miW-iN-9YI"/>
+                    <constraint firstItem="NhV-rH-oTT" firstAttribute="top" secondItem="ErN-av-81C" secondAttribute="top" id="zZQ-aj-4aW"/>
+                </constraints>
+            </tableViewCellContentView>
+            <viewLayoutGuide key="safeArea" id="aW0-zy-SZf"/>
+            <connections>
+                <outlet property="backView" destination="NhV-rH-oTT" id="YEl-qj-sTP"/>
+                <outlet property="imgView" destination="EF1-7o-VuF" id="1P5-xA-fME"/>
+                <outlet property="shipName" destination="ErN-av-81C" id="vhh-uM-zYc"/>
+                <outlet property="stationLab" destination="7ke-wn-iUh" id="AtD-KU-SVK"/>
+                <outlet property="tagsView" destination="NhV-rH-oTT" id="hCf-eO-cZr"/>
+            </connections>
+            <point key="canvasLocation" x="47.5" y="60.5"/>
+        </tableViewCell>
+    </objects>
+    <resources>
+        <image name="hy_importantClient_img" width="35" height="35"/>
+    </resources>
+</document>

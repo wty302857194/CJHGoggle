@@ -1,0 +1,39 @@
+//
+//  HYShipInfoHeaderView.h
+//
+//  Created by 耿建峰 on 2017/10/15.
+//  Copyright © 2017年 gengjf. All rights reserved.
+//
+
+#import "HYBaseView.h"
+
+@class HYShipInfoHeaderView;
+@class HYShipInfo;
+
+@protocol HYShipInfoHeaderViewDelegate <NSObject>
+
+// 查看轨迹
+- (void)shipInfoHeaderView:(HYShipInfoHeaderView *)view historyTrail:(HYShipInfo *)model;
+// 添加星标
+- (void)shipInfoHeaderViewAddStar:(HYShipInfoHeaderView *)view;
+// 选择查看用户信息
+- (void)shipInfoHeaderViewSelectUserInfo:(HYShipInfoHeaderView *)view;
+// 选择查看消费记录
+- (void)shipInfoHeaderViewSelectPayRecord:(HYShipInfoHeaderView *)view;
+
+@end
+
+// 请求方式
+typedef NS_ENUM(NSInteger, HYSHIPINFO_HEAD_TYPE) {
+    
+    HYSHIPINFO_HEAD_USER = 1 << 0,    // POST方式来进行请求
+    HYSHIPINFO_HEAD_PAY_RECORD  = 1 << 1,    // GET方式来进行请求
+};
+
+@interface HYShipInfoHeaderView : HYBaseView
+
+@property (nonatomic, weak) id<HYShipInfoHeaderViewDelegate> delegate;
+
+- (HYSHIPINFO_HEAD_TYPE)currentSelectedType;
+
+@end

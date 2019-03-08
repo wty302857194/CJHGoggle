@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>data</key>
+	<array>
+		<dict>
+			<key>imgUrl</key>
+			<string>user_announce</string>
+			<key>title</key>
+			<string>发布公告</string>
+			<key>typeId</key>
+			<string>0</string>
+		</dict>
+		<dict>
+			<key>imgUrl</key>
+			<string>user_tags</string>
+			<key>title</key>
+			<string>我的标签</string>
+			<key>typeId</key>
+			<string>1</string>
+		</dict>
+		<dict>
+			<key>imgUrl</key>
+			<string>user_publicSeaPool</string>
+			<key>title</key>
+			<string>公海池</string>
+			<key>typeId</key>
+			<string>2</string>
+		</dict>
+		<dict>
+			<key>imgUrl</key>
+			<string>user_setting_remind</string>
+			<key>title</key>
+			<string>提醒设置</string>
+			<key>typeId</key>
+			<string>3</string>
+		</dict>
+		<dict>
+			<key>imgUrl</key>
+			<string>user_myShip</string>
+			<key>title</key>
+			<string>我的船舶</string>
+			<key>typeId</key>
+			<string>4</string>
+		</dict>
+	</array>
+</dict>
+</plist>
